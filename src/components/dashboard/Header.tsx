@@ -61,10 +61,12 @@ export function Header({ activePage, onPageChange }: HeaderProps) {
           onClick={() => onPageChange('home')}
           type="button"
         >
-          <span className="text-2xl font-extrabold tracking-[-0.05em] text-[#F5F0E8]">
-            STELLAR DOMAIN
+          <span
+            className="leading-none text-[#F5F0E8]"
+            style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 800, letterSpacing: '-0.03em' }}
+          >
+            TERMINAL<span style={{ color: '#C8A84B' }}>8</span>
           </span>
-          <span className="size-2.5 rotate-45 bg-[#C8A84B]" />
         </button>
 
         <nav className="flex flex-wrap items-center justify-start gap-2 lg:justify-center lg:gap-7">
@@ -96,10 +98,19 @@ export function Header({ activePage, onPageChange }: HeaderProps) {
               type="button"
             >
               <span
-                className={`size-2 rounded-full ${
-                  connected ? 'bg-[#4ade80]' : status === 'ERROR' ? 'bg-red-400' : 'bg-[#6B7B6B]/40'
-                }`}
-              />
+                className="relative flex size-2 shrink-0 items-center justify-center"
+              >
+                {connected ? (
+                  <>
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#4ade80] opacity-50" />
+                    <span className="relative inline-flex size-2 rounded-full bg-[#4ade80]" />
+                  </>
+                ) : (
+                  <span
+                    className={`inline-flex size-2 rounded-full ${status === 'ERROR' ? 'bg-red-400' : 'bg-[#6B7B6B]/40'}`}
+                  />
+                )}
+              </span>
               {status === 'CONNECTING'
                 ? 'Connecting'
                 : connected

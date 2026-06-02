@@ -55,3 +55,42 @@ export type RouteHop = {
 }
 
 export type RiskProfile = 'Conservative' | 'Moderate' | 'Aggressive'
+
+export type PoolReputation = {
+  liquidity: number
+  age: number
+  audit: number
+  activity: number
+}
+
+export type LocalPosition = {
+  id: string
+  amount: number
+  asset: 'XLM' | 'USDC'
+  hash: string
+  protocol: string
+  status: string
+  timestamp: string
+  openedAt: number
+  apy: number
+  category: 'Lending' | 'AMM LP' | 'AMM Rewards'
+  poolId: string
+}
+
+export type DeFiPool = {
+  id: string
+  protocol: string
+  category: 'Lending' | 'AMM LP' | 'AMM Rewards'
+  asset: 'XLM' | 'USDC'
+  secondaryAsset?: string
+  apy: number
+  tvl: string
+  tvlRaw: number
+  utilization?: number
+  volume24h?: string
+  reputation: PoolReputation
+  risk: RiskProfile
+  method: 'supply()' | 'addLiquidity()'
+  rationale: string
+  contractId: string
+}

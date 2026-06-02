@@ -112,7 +112,7 @@ export function WalletOperations() {
 
             return (
               <button
-                className={`grid w-full grid-cols-[44px_1fr_1fr_1.2fr] items-center px-4 py-4 text-left text-sm transition ${
+                className={`grid w-full grid-cols-[44px_1fr_1fr_1.2fr] items-center px-4 py-4 text-left text-sm transition-colors duration-150 ${
                   selected ? 'bg-[#C8A84B]/12' : 'bg-[#F5F0E8]/45 hover:bg-white/55'
                 } border-t border-[#6B7B6B]/15`}
                 key={asset.id}
@@ -120,13 +120,13 @@ export function WalletOperations() {
                 type="button"
               >
                 <span
-                  className={`flex size-5 items-center justify-center rounded border text-xs ${
+                  className={`flex size-5 items-center justify-center rounded border text-xs font-bold transition-all duration-150 ${
                     selected
                       ? 'border-[#C8A84B] bg-[#C8A84B] text-[#1A2E1A]'
                       : 'border-[#6B7B6B]/30 bg-white/35'
                   }`}
                 >
-                  {selected ? 'x' : ''}
+                  {selected ? '✓' : ''}
                 </span>
                 <span>
                   <span className="rounded-md bg-[#C8A84B]/15 px-2 py-1 font-medium text-[#1A2E1A]">

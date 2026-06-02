@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Terminal8 · Pitch Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:    #1A2E1A;
+    --cream:  #F5F0E8;
+    --gold:   #C8A84B;
+    --green:  #4ade80;
+    --muted:  #6B7B6B;
+    --dark:   #0F1F0F;
+    --mid:    #102510;
+  }
+
+  body {
+    font-family: 'Funnel Display', system-ui, sans-serif;
+    background: #e8e4dd;
+  }
+
+  /* ── Slide shell ── */
+  .slide {
+    width: 1280px;
+    height: 720px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto 32px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.18);
+  }
+
+  /* ── Themes ── */
+  .theme-cream  { background: var(--cream); color: var(--ink); }
+  .theme-dark   { background: var(--ink);   color: var(--cream); }
+  .theme-darker { background: var(--dark);  color: var(--cream); }
+  .theme-split  { background: var(--cream); color: var(--ink); }
+
+  /* ── Shared layout ── */
+  .slide-inner {
+    padding: 64px 72px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ── Typography ── */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+  .theme-cream .eyebrow { color: var(--muted); }
+
+  h1.display {
+    font-size: 80px;
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -.04em;
+  }
+  h2.title {
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -.03em;
+  }
+  h3.section-title {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.15;
+  }
+  .lead {
+    font-size: 22px;
+    line-height: 1.55;
+    font-weight: 300;
+    max-width: 680px;
+    margin-top: 20px;
+  }
+  .lead-sm {
+    font-size: 17px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  /* ── Accent colors ── */
+  .gold  { color: var(--gold); }
+  .green { color: var(--green); }
+  .muted { color: rgba(245,240,232,.5); }
+
+  /* ── Decorative diamond ── */
+  .diamond {
+    width: 16px; height: 16px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .diamond-lg {
+    width: 28px; height: 28px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    display: inline-block;
+  }
+
+  /* ── Cover slide ── */
+  .cover-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--dark) 0%, var(--mid) 55%, #1a3a1a 100%);
+  }
+  .cover-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,168,75,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,168,75,.06) 1px, transparent 1px);
+    background-size: 80px 80px;
+  }
+  .cover-inner {
+    padding: 64px 80px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .cover-logo-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    color: var(--cream);
+  }
+  .cover-logo-eight {
+    color: var(--gold);
+  }
+  .cover-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .cover-tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 24px;
+  }
+  .cover-h1 {
+    font-size: 88px;
+    font-weight: 800;
+    line-height: .95;
+    letter-spacing: -.05em;
+    color: var(--cream);
+  }
+  .cover-sub {
+    font-size: 24px;
+    font-weight: 300;
+    color: rgba(245,240,232,.6);
+    margin-top: 24px;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+  .cover-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cover-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(74,222,128,.3);
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--green);
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Slide number ── */
+  .slide-num {
+    position: absolute;
+    bottom: 28px;
+    right: 40px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    opacity: .35;
+  }
+
+  /* ── Grid layouts ── */
+  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; }
+  .cols-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; }
+
+  /* ── Cards ── */
+  .card {
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+  }
+  .card-cream { background: rgba(255,255,255,.6); border: 1px solid rgba(107,123,107,.15); }
+  .card-dark  { background: rgba(255,255,255,.05); border: 1px solid rgba(245,240,232,.08); }
+  .card-gold  { background: rgba(200,168,75,.08); border: 1px solid rgba(200,168,75,.25); }
+  .card-green { background: rgba(74,222,128,.08); border: 1px solid rgba(74,222,128,.25); }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -.01em;
+  }
+  .card-body {
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  /* ── Stat ── */
+  .stat-num {
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.04em;
+  }
+  .stat-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-top: 6px;
+    opacity: .6;
+  }
+
+  /* ── Pain point ── */
+  .pain {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 24px 28px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.55);
+    border: 1px solid rgba(107,123,107,.12);
+  }
+  .pain-icon {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .pain-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .pain-desc  { font-size: 14px; line-height: 1.55; color: var(--muted); }
+
+  /* ── Timeline ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .tl-item {
+    display: flex;
+    gap: 24px;
+    position: relative;
+  }
+  .tl-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 19px;
+    top: 40px;
+    bottom: -12px;
+    width: 2px;
+    background: rgba(245,240,232,.1);
+  }
+  .tl-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 2px;
+    position: relative;
+    z-index: 1;
+  }
+  .tl-dot-live   { background: rgba(74,222,128,.2);  border: 2px solid var(--green); color: var(--green); }
+  .tl-dot-next   { background: rgba(200,168,75,.15); border: 2px solid var(--gold);  color: var(--gold); }
+  .tl-dot-future { background: rgba(245,240,232,.05); border: 2px solid rgba(245,240,232,.2); color: rgba(245,240,232,.4); }
+  .tl-body { padding: 4px 0 24px; flex: 1; }
+  .tl-version { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .tl-title-text { font-size: 20px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 4px; }
+  .tl-date { font-size: 12px; opacity: .45; margin-bottom: 10px; }
+  .tl-items-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tl-tag {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    border: 1px solid rgba(245,240,232,.12);
+    color: rgba(245,240,232,.55);
+  }
+  .tl-tag-live  { border-color: rgba(74,222,128,.3);  color: rgba(74,222,128,.8);  background: rgba(74,222,128,.06); }
+  .tl-tag-next  { border-color: rgba(200,168,75,.3);  color: rgba(200,168,75,.8);  background: rgba(200,168,75,.06); }
+
+  /* ── Competitor table ── */
+  .comp-table { width: 100%; border-collapse: collapse; }
+  .comp-table th {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    text-align: left;
+    color: rgba(245,240,232,.4);
+    border-bottom: 1px solid rgba(245,240,232,.08);
+  }
+  .comp-table td {
+    padding: 14px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(245,240,232,.06);
+    vertical-align: middle;
+  }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table tr.us td { background: rgba(200,168,75,.08); }
+  .comp-table tr.us td:first-child { border-radius: 8px 0 0 8px; }
+  .comp-table tr.us td:last-child  { border-radius: 0 8px 8px 0; }
+  .check { color: var(--green); }
+  .cross { color: rgba(245,240,232,.25); }
+  .partial { color: var(--gold); }
+
+  /* ── Bg decorations ── */
+  .deco-circle {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+
+  /* ── How it works steps ── */
+  .step {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 28px;
+    border-radius: 16px;
+    border: 1px solid rgba(107,123,107,.15);
+    background: rgba(255,255,255,.55);
+    position: relative;
+  }
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .step-title { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+  .step-body  { font-size: 14px; line-height: 1.6; color: var(--muted); }
+  .step-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(107,123,107,.2);
+    border-radius: 100px;
+    padding: 4px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    width: fit-content;
+  }
+
+  /* ── Market bars ── */
+  .market-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .bar-label { font-size: 13px; font-weight: 600; width: 56px; }
+  .bar-track {
+    flex: 1;
+    height: 10px;
+    background: rgba(245,240,232,.08);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 100px; }
+  .bar-val { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; width: 80px; text-align: right; }
+
+  /* ─── Print / PDF ─────────────────────────────── */
+  @media print {
+    body { background: white; }
+    .slide {
+      margin: 0;
+      page-break-after: always;
+      box-shadow: none;
+      width: 100vw;
+      height: 100vh;
+    }
+    .slide:last-child { page-break-after: avoid; }
+  }
+
+  @page { size: 1280px 720px; margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 1 — COVER                                           -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="cover-bg"></div>
+  <div class="cover-grid"></div>
+  <div class="deco-circle" style="width:500px;height:500px;background:rgba(200,168,75,.07);top:-100px;right:-100px;"></div>
+  <div class="deco-circle" style="width:300px;height:300px;background:rgba(74,222,128,.05);bottom:-80px;left:100px;"></div>
+  <div class="cover-inner">
+    <div class="cover-logo">
+      <div class="diamond"></div>
+      <span class="cover-logo-text">TERMINAL<span class="cover-logo-eight">8</span></span>
+    </div>
+
+    <div class="cover-main">
+      <div class="cover-tag">Protocol Pitch · 2026</div>
+      <div class="cover-h1">One interface<br /><span style="color:var(--gold)">for all of</span><br />Stellar DeFi</div>
+      <div class="cover-sub">Batch swaps, risk-adjusted yield routing, and position management — built on Soroban.</div>
+    </div>
+
+    <div class="cover-footer">
+      <div class="cover-badge">
+        <div class="live-dot"></div>
+        v0.1 Live on Testnet
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(245,240,232,.3);">
+        Stellar · Soroban · Horizon
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 2 — PROBLEM                                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide theme-cream">
+  <div class="slide-inner">
+    <div class="eyebrow">The Problem</div>
+    <h2 class="title" style="margin-bottom:36px;">Stellar DeFi is powerful<br />but impossible to navigate</h2>
+
+    <div class="cols-3" style="gap:20px;">
+      <div class="pain">
+        <div class="pain-icon">🧩</div>
+        <div>
+          <div class="pain-title">Fragmented ecosystem</div>
+          <div class="pain-desc">Users need 3+ separate apps to access Blend lending, Soroswap LP, and Aquarius rewards. No single view of positions.</div>
+        </div>
+      </div>
+      <div class="pain">
+        <div class="pain-icon">💤</div>
+        <div>
+          <div class="pain-title">Idle capital everywhere</div>
+          <div class="pain-desc">70%+ of Stellar wallets hold dust trustlines earning 0%. No tool to batch-sweep them into productive yield positions.</div>
+        </div>
+      </div>
+      <div class="pain">
+        <div class="pain-icon">🎲</div>
+        <div>
+          <div class="pain-title">No trust signal for pools</div>
+          <div class="pain-desc">Users can't evaluate which pools are safe. No reputation score, audit status, or liquidity-depth signal in any interface.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;padding:20px 28px;border-radius:14px;background:rgba(26,46,26,.06);border:1px solid rgba(26,46,26,.1);display:flex;align-items:center;gap:24px;">
+      <div style="font-size:36px;font-weight:800;color:var(--ink);">$300M+</div>
+      <div style="font-size:15px;color:var(--muted);line-height:1.5;">in Stellar DeFi TVL spread across Blend, Soroswap, and Aquarius — with <strong style="color:var(--ink)">zero unified interface</strong> to manage it.</div>
+    </div>
+  </div>
+  <div class="slide-num">02 / 09</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 3 — SOLUTION                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide theme-darker">
+  <div class="deco-circle" style="width:600px;height:600px;background:rgba(200,168,75,.04);top:-200px;right:-200px;"></div>
+  <div class="slide-inner">
+    <div class="eyebrow">The Solution</div>
+    <h2 class="title" style="margin-bottom:8px;">Terminal8 Protocol</h2>
+    <p class="lead" style="color:rgba(245,240,232,.55);margin-bottom:40px;">A composable DeFi routing and yield management layer on Soroban.</p>
+
+    <div class="cols-2" style="gap:20px;">
+      <div class="card card-dark">
+        <div style="font-size:24px;margin-bottom:12px;">⚡</div>
+        <div class="card-title" style="color:var(--cream);">Batch Swap Engine</div>
+        <div class="card-body" style="color:rgba(245,240,232,.5);">One transaction bundles all PathPaymentStrictSend ops with fee-bump envelope. Sweep dust to USDC in seconds.</div>
+      </div>
+      <div class="card card-dark">
+        <div style="font-size:24px;margin-bottom:12px;">🛡</div>
+        <div class="card-title" style="color:var(--cream);">Pool Reputation Score</div>
+        <div class="card-body" style="color:rgba(245,240,232,.5);">Each pool scored 0–100 across Liquidity, Protocol Age, Audit Status, and Activity. Like Ethos — but for Stellar DeFi.</div>
+      </div>
+      <div class="card card-dark">
+        <div style="font-size:24px;margin-bottom:12px;">🎯</div>
+        <div class="card-title" style="color:var(--cream);">Risk Profiling</div>
+        <div class="card-body" style="color:rgba(245,240,232,.5);">3-question onboarding quiz personalises pool recommendations — Conservative, Moderate, or Aggressive.</div>
+      </div>
+      <div class="card card-dark">
+        <div style="font-size:24px;margin-bottom:12px;">💻</div>
+        <div class="card-title" style="color:var(--cream);">Developer CLI Terminal</div>
+        <div class="card-body" style="color:rgba(245,240,232,.5);">Power users manage positions via terminal commands: <span class="mono" style="color:var(--gold);">withdraw 1 --full</span>, <span class="mono" style="color:var(--gold);">pools</span>, <span class="mono" style="color:var(--gold);">balance</span>.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num" style="color:rgba(245,240,232,.3);">03 / 09</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 4 — HOW IT WORKS                                    -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide theme-cream">
+  <div class="slide-inner">
+    <div class="eyebrow">How It Works</div>
+    <h2 class="title" style="margin-bottom:36px;">From wallet to yield in three steps</h2>
+
+    <div class="cols-3">
+      <div class="step">
+        <div class="step-num">Step 01</div>
+        <div class="step-title">Connect & Profile</div>
+        <div class="step-body">Connect Freighter wallet. A 3-question risk quiz determines your profile and personalises all recommendations.</div>
+        <div class="step-tag"><span>🔐</span> Freighter</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 02</div>
+        <div class="step-title">Review & Select</div>
+        <div class="step-body">Browse pool cards with APY, TVL, and trust score. Reputation breakdown shows audit status and liquidity depth.</div>
+        <div class="step-tag"><span>📊</span> Trust Score</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 03</div>
+        <div class="step-title">Sign & Manage</div>
+        <div class="step-body">Freighter signs on Testnet. Positions appear live with estimated yield. Withdraw via UI or terminal command.</div>
+        <div class="step-tag"><span>✓</span> Soroban TX</div>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;display:flex;align-items:center;gap:12px;padding:16px 24px;border-radius:12px;background:rgba(26,46,26,.05);border:1px solid rgba(26,46,26,.1);">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);">$ withdraw 1 --full</span>
+      <span style="color:rgba(107,123,107,.4)">→</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#4ade80;">✓ Transaction confirmed  a8f3e1b2c4d5…</span>
+      <span style="color:rgba(107,123,107,.4)">→</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#4ade80;">Position #1 closed.</span>
+    </div>
+  </div>
+  <div class="slide-num">04 / 09</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 5 — TRACTION / KEY METRICS                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide theme-dark">
+  <div class="deco-circle" style="width:400px;height:400px;background:rgba(74,222,128,.05);bottom:-100px;left:-100px;"></div>
+  <div class="slide-inner">
+    <div class="eyebrow" style="color:var(--gold);">Product</div>
+    <h2 class="title" style="margin-bottom:40px;">Built and live on Testnet</h2>
+
+    <div class="cols-4" style="margin-bottom:40px;">
+      <div style="text-align:center;">
+        <div class="stat-num gold">5</div>
+        <div class="stat-label">DeFi pools<br/>integrated</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="stat-num green">3</div>
+        <div class="stat-label">Protocols<br/>Blend · Soroswap · Aquarius</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="stat-num gold">12</div>
+        <div class="stat-label">Terminal<br/>commands</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="stat-num green">100</div>
+        <div class="stat-label">Trust score<br/>0–100 scale</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="padding:20px 24px;border-radius:14px;border:1px solid rgba(74,222,128,.2);background:rgba(74,222,128,.06);">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:8px;">Live features</div>
+        <div style="font-size:14px;line-height:2;color:rgba(245,240,232,.7);">
+          ✓ &nbsp;Freighter wallet integration<br/>
+          ✓ &nbsp;Batch PathPaymentStrictSend<br/>
+          ✓ &nbsp;Risk profiling quiz<br/>
+          ✓ &nbsp;Pool reputation scoring
+        </div>
+      </div>
+      <div style="padding:20px 24px;border-radius:14px;border:1px solid rgba(200,168,75,.2);background:rgba(200,168,75,.06);">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">In progress</div>
+        <div style="font-size:14px;line-height:2;color:rgba(245,240,232,.7);">
+          ◉ &nbsp;Soroswap LP management<br/>
+          ◉ &nbsp;Aquarius auto-compounding<br/>
+          ◉ &nbsp;Real-time APY indexing<br/>
+          ◉ &nbsp;Mainnet batch swap
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num" style="color:rgba(245,240,232,.3);">05 / 09</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 6 — COMPETITIVE LANDSCAPE                           -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide theme-darker">
+  <div class="deco-circle" style="width:500px;height:500px;background:rgba(200,168,75,.04);top:-150px;right:-150px;"></div>
+  <div class="slide-inner">
+    <div class="eyebrow">Competition</div>
+    <h2 class="title" style="margin-bottom:36px;">No one owns Stellar DeFi UX</h2>
+
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Stellar Native</th>
+          <th>Batch Swaps</th>
+          <th>Yield Routing</th>
+          <th>Trust Scoring</th>
+          <th>CLI Terminal</th>
+          <th>Risk Profiling</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="us">
+          <td><strong style="color:var(--gold);">Terminal8</strong></td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td style="color:rgba(245,240,232,.7);">Zapper</td>
+          <td class="cross">✗</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+          <td class="partial">~</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td style="color:rgba(245,240,232,.7);">DeBank</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="partial">~</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td style="color:rgba(245,240,232,.7);">Stellar Expert</td>
+          <td class="check">✓</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td style="color:rgba(245,240,232,.7);">StellarX</td>
+          <td class="check">✓</td>
+          <td class="partial">~</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:28px;padding:16px 24px;border-radius:12px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.2);font-size:14px;color:rgba(245,240,232,.7);line-height:1.6;">
+      <strong style="color:var(--gold);">Key insight:</strong> Zapper and DeBank are EVM-first and don't integrate Stellar protocols. No existing product offers unified yield routing + trust scoring + CLI on Stellar.
+    </div>
+  </div>
+  <div class="slide-num" style="color:rgba(245,240,232,.3);">06 / 09</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 7 — MARKET OPPORTUNITY                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide theme-cream">
+  <div class="slide-inner">
+    <div class="eyebrow">Market</div>
+    <h2 class="title" style="margin-bottom:40px;">A $2B+ ecosystem with no<br />portfolio management layer</h2>
+
+    <div class="cols-2" style="gap:48px;align-items:center;">
+      <div>
+        <div style="margin-bottom:28px;">
+          <div class="market-bar" style="margin-bottom:14px;">
+            <div class="bar-label" style="font-size:11px;color:var(--muted);letter-spacing:.05em;">TAM</div>
+            <div class="bar-track"><div class="bar-fill" style="width:100%;background:rgba(26,46,26,.15);"></div></div>
+            <div class="bar-val" style="color:var(--ink);">$2B+</div>
+          </div>
+          <p style="font-size:12px;color:var(--muted);padding-left:72px;">Total Stellar ecosystem — 7M+ wallets, $2B+ in assets on-chain</p>
+        </div>
+        <div style="margin-bottom:28px;">
+          <div class="market-bar" style="margin-bottom:14px;">
+            <div class="bar-label" style="font-size:11px;color:var(--muted);letter-spacing:.05em;">SAM</div>
+            <div class="bar-track"><div class="bar-fill" style="width:55%;background:rgba(200,168,75,.5);"></div></div>
+            <div class="bar-val" style="color:var(--ink);">$300M</div>
+          </div>
+          <p style="font-size:12px;color:var(--muted);padding-left:72px;">Active Stellar DeFi TVL — Blend, Soroswap, Aquarius combined</p>
+        </div>
+        <div>
+          <div class="market-bar" style="margin-bottom:14px;">
+            <div class="bar-label" style="font-size:11px;color:var(--muted);letter-spacing:.05em;">SOM</div>
+            <div class="bar-track"><div class="bar-fill" style="width:25%;background:var(--green);"></div></div>
+            <div class="bar-val" style="color:var(--ink);">$15M</div>
+          </div>
+          <p style="font-size:12px;color:var(--muted);padding-left:72px;">5% TVL managed at 0.3% protocol fee = <strong style="color:var(--ink);">$45K ARR at launch</strong></p>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="card card-cream" style="text-align:center;">
+          <div class="stat-num" style="font-size:40px;">7M+</div>
+          <div class="stat-label">Stellar active wallets</div>
+        </div>
+        <div class="card card-cream" style="text-align:center;">
+          <div class="stat-num" style="font-size:40px;color:var(--gold);">~60%</div>
+          <div class="stat-label">wallets with idle dust tokens</div>
+        </div>
+        <div class="card card-cream" style="text-align:center;">
+          <div class="stat-num" style="font-size:40px;color:#4ade80;">3×</div>
+          <div class="stat-label">Soroban TVL growth in 12 months</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">07 / 09</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 8 — ROADMAP                                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide theme-darker">
+  <div class="deco-circle" style="width:500px;height:500px;background:rgba(74,222,128,.04);bottom:-150px;right:-100px;"></div>
+  <div class="slide-inner">
+    <div class="eyebrow">Roadmap</div>
+    <h2 class="title" style="margin-bottom:36px;">From MVP to protocol</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot tl-dot-live">v0.1</div>
+          <div class="tl-body">
+            <div class="tl-version gold">v0.1 — Foundation</div>
+            <div class="tl-title-text">Live on Testnet</div>
+            <div class="tl-date">June 2026</div>
+            <div class="tl-items-list">
+              <span class="tl-tag tl-tag-live">Wallet connect</span>
+              <span class="tl-tag tl-tag-live">Batch swap</span>
+              <span class="tl-tag tl-tag-live">Risk quiz</span>
+              <span class="tl-tag tl-tag-live">Trust scoring</span>
+              <span class="tl-tag tl-tag-live">CLI terminal</span>
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot tl-dot-next">v0.2</div>
+          <div class="tl-body">
+            <div class="tl-version gold">v0.2 — DeFi Primitives</div>
+            <div class="tl-title-text">Full Protocol</div>
+            <div class="tl-date">Q3 2026</div>
+            <div class="tl-items-list">
+              <span class="tl-tag tl-tag-next">LP management</span>
+              <span class="tl-tag tl-tag-next">Auto-compound</span>
+              <span class="tl-tag tl-tag-next">Live APY index</span>
+              <span class="tl-tag tl-tag-next">Mainnet swap</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot tl-dot-future">v0.3</div>
+          <div class="tl-body">
+            <div class="tl-version" style="color:rgba(245,240,232,.4);">v0.3 — Developer SDK</div>
+            <div class="tl-title-text" style="color:rgba(245,240,232,.6);">Open for Builders</div>
+            <div class="tl-date">Q4 2026</div>
+            <div class="tl-items-list">
+              <span class="tl-tag">npm SDK</span>
+              <span class="tl-tag">REST API</span>
+              <span class="tl-tag">Webhooks</span>
+              <span class="tl-tag">CLI tool</span>
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot tl-dot-future">v1</div>
+          <div class="tl-body">
+            <div class="tl-version" style="color:rgba(245,240,232,.4);">v1.0 — Mainnet</div>
+            <div class="tl-title-text" style="color:rgba(245,240,232,.6);">Audited + Governance</div>
+            <div class="tl-date">Q1 2027</div>
+            <div class="tl-items-list">
+              <span class="tl-tag">Audited contracts</span>
+              <span class="tl-tag">SDP token</span>
+              <span class="tl-tag">DAO</span>
+              <span class="tl-tag">Protocol fee</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num" style="color:rgba(245,240,232,.3);">08 / 09</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 9 — CTA / CLOSING                                   -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="cover-bg"></div>
+  <div class="cover-grid"></div>
+  <div class="deco-circle" style="width:600px;height:600px;background:rgba(74,222,128,.05);top:-200px;left:-200px;"></div>
+  <div class="deco-circle" style="width:400px;height:400px;background:rgba(200,168,75,.06);bottom:-100px;right:-100px;"></div>
+  <div class="cover-inner">
+    <div class="cover-logo">
+      <div class="diamond"></div>
+      <span class="cover-logo-text">TERMINAL<span class="cover-logo-eight">8</span></span>
+    </div>
+
+    <div class="cover-main">
+      <div class="cover-tag">We're building the DeFi layer Stellar deserves</div>
+      <div class="cover-h1" style="font-size:72px;">The Bloomberg<br /><span style="color:var(--gold);">Terminal</span><br />for Stellar DeFi</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+      <div style="padding:16px 20px;border-radius:12px;background:rgba(245,240,232,.04);border:1px solid rgba(245,240,232,.08);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,240,232,.4);margin-bottom:8px;">Open source</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(245,240,232,.6);">github.com/terminal8</div>
+      </div>
+      <div style="padding:16px 20px;border-radius:12px;background:rgba(245,240,232,.04);border:1px solid rgba(245,240,232,.08);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,240,232,.4);margin-bottom:8px;">Community</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(245,240,232,.6);">discord.gg/terminal8</div>
+      </div>
+      <div style="padding:16px 20px;border-radius:12px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.2);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Contact</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(245,240,232,.6);">hello@terminal8.xyz</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
