@@ -65,7 +65,7 @@ export function Header({ activePage, onPageChange }: HeaderProps) {
             className="leading-none text-[#F5F0E8]"
             style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 800, letterSpacing: '-0.03em' }}
           >
-            TERMINAL<span style={{ color: '#C8A84B' }}>8</span>
+            TERMINAL<span style={{ color: '#C8A84B', fontSize: '30px', verticalAlign: '-2px' }}>8</span>
           </span>
         </button>
 

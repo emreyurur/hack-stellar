@@ -3,7 +3,80 @@ import { reputationLabel, reputationTotal, stellarPools } from '../../data/stell
 import { useWallet } from '../../context/useWallet'
 import { executeMockTestnetSupply } from '../../services/mockTestnetSupply'
 import { executeMockTestnetWithdraw } from '../../services/mockTestnetWithdraw'
+import { estimateSecondaryAmount, executeSoroswapAddLiquidity } from '../../services/soroswapLiquidity'
 import type { DeFiPool, LocalPosition, RiskProfile } from '../../types/stellar'
+
+// ─── Bundle definitions ───────────────────────────────────────────────────────
+
+type BundleAlloc = {
+  poolId: string
+  label: string
+  pct: number
+  category: 'Lending' | 'AMM LP' | 'AMM Rewards'
+  asset: 'XLM' | 'USDC'
+}
+
+type YieldBundle = {
+  id: string
+  name: string
+  tagline: string
+  risk: RiskProfile
+  estApy: number
+  dotColor: string
+  borderActive: string
+  bgActive: string
+  textColor: string
+  allocations: BundleAlloc[]
+}
+
+const BUNDLES: YieldBundle[] = [
+  {
+    id: 'conservative',
+    name: 'Conservative',
+    tagline: 'Capital protection first',
+    risk: 'Conservative',
+    estApy: 4.6,
+    dotColor: 'bg-[#4ade80]',
+    borderActive: 'border-[#4ade80]/40',
+    bgActive: 'bg-[#4ade80]/8',
+    textColor: 'text-[#4ade80]',
+    allocations: [
+      { poolId: 'blend-usdc-lending', label: 'Blend USDC Lending', pct: 80, category: 'Lending', asset: 'USDC' },
+      { poolId: 'blend-xlm-lending',  label: 'Blend XLM Lending',  pct: 20, category: 'Lending', asset: 'XLM' },
+    ],
+  },
+  {
+    id: 'balanced',
+    name: 'Balanced',
+    tagline: 'Lending + LP exposure',
+    risk: 'Moderate',
+    estApy: 7.8,
+    dotColor: 'bg-[#C8A84B]',
+    borderActive: 'border-[#C8A84B]/40',
+    bgActive: 'bg-[#C8A84B]/8',
+    textColor: 'text-[#C8A84B]',
+    allocations: [
+      { poolId: 'blend-usdc-lending', label: 'Blend USDC Lending',   pct: 50, category: 'Lending', asset: 'USDC' },
+      { poolId: 'soroswap-xlm-usdc',  label: 'Soroswap XLM/USDC LP', pct: 50, category: 'AMM LP', asset: 'XLM' },
+    ],
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    tagline: 'Maximum yield exposure',
+    risk: 'Aggressive',
+    estApy: 12.4,
+    dotColor: 'bg-orange-400',
+    borderActive: 'border-orange-400/35',
+    bgActive: 'bg-orange-400/6',
+    textColor: 'text-orange-400',
+    allocations: [
+      { poolId: 'blend-usdc-lending', label: 'Blend USDC Lending',   pct: 25, category: 'Lending', asset: 'USDC' },
+      { poolId: 'soroswap-xlm-usdc',  label: 'Soroswap XLM/USDC LP', pct: 40, category: 'AMM LP', asset: 'XLM' },
+      { poolId: 'aquarius-aqua-xlm',  label: 'Aquarius AQUA/XLM',    pct: 35, category: 'AMM Rewards', asset: 'XLM' },
+    ],
+  },
+]
 
 export function DefiOperations({
   onPositionAdded,
@@ -26,6 +99,7 @@ export function DefiOperations({
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null)
   const [expandedReputation, setExpandedReputation] = useState<string | null>(null)
   const [managingPosition, setManagingPosition] = useState<LocalPosition | null>(null)
+  const [executingBundle, setExecutingBundle] = useState<YieldBundle | null>(null)
 
   const recommended = riskProfile ? stellarPools.filter((p) => p.risk === riskProfile) : []
   const others = riskProfile ? stellarPools.filter((p) => p.risk !== riskProfile) : stellarPools
@@ -74,6 +148,27 @@ export function DefiOperations({
               </div>
             </div>
           )}
+
+          {positions.length > 1 && (
+            <PortfolioAllocation positions={positions} riskProfile={riskProfile} />
+          )}
+
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <SectionLabel>Yield Bundles</SectionLabel>
+              <span className="text-[10px] text-[#6B7B6B]">One-click multi-protocol allocation</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {BUNDLES.map((bundle) => (
+                <BundleCard
+                  bundle={bundle}
+                  isRecommended={bundle.risk === riskProfile}
+                  key={bundle.id}
+                  onExecute={() => setExecutingBundle(bundle)}
+                />
+              ))}
+            </div>
+          </div>
 
           {riskProfile && recommended.length > 0 && (
             <div>
@@ -130,6 +225,15 @@ export function DefiOperations({
           onClose={() => setManagingPosition(null)}
           onWithdrawn={onWithdrawn}
           position={managingPosition}
+        />
+      )}
+
+      {executingBundle && (
+        <BundleExecuteModal
+          bundle={executingBundle}
+          onClose={() => setExecutingBundle(null)}
+          onPositionAdded={onPositionAdded}
+          usdcBalance={usdcBalance}
         />
       )}
     </div>
@@ -652,11 +756,17 @@ function StakeTicket({
   onPositionAdded: (pos: Omit<LocalPosition, 'id'>) => void
   pool: DeFiPool
 }) {
-  const { networkPassphrase, networkUrl, publicKey, status } = useWallet()
+  const { networkPassphrase, networkUrl, publicKey, sorobanRpcUrl, status } = useWallet()
   const [amount, setAmount] = useState(0)
   const [txState, setTxState] = useState<'idle' | 'signing' | 'submitted' | 'error'>('idle')
   const [txMessage, setTxMessage] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
+
+  const isLP = pool.category === 'AMM LP' || pool.category === 'AMM Rewards'
+  const secondaryAsset = pool.secondaryAsset as 'XLM' | 'USDC' | undefined
+  const secondaryAmount = isLP && secondaryAsset && (secondaryAsset === 'XLM' || secondaryAsset === 'USDC')
+    ? estimateSecondaryAmount(pool.asset, amount)
+    : 0
 
   const isTestnet = networkPassphrase?.toLowerCase().includes('test') ?? false
   const isConnected =
@@ -681,14 +791,33 @@ function StakeTicket({
 
     try {
       setTxState('signing')
-      const result = await executeMockTestnetSupply({
-        amount,
-        asset: pool.asset,
-        horizonUrl: networkUrl,
-        networkPassphrase,
-        protocol: pool.protocol,
-        publicKey,
-      })
+
+      let result: { hash: string; status: string }
+
+      if (isLP && secondaryAsset && (secondaryAsset === 'XLM' || secondaryAsset === 'USDC') && sorobanRpcUrl) {
+        // Real Soroswap addLiquidity call
+        result = await executeSoroswapAddLiquidity({
+          amountA: amount,
+          amountB: secondaryAmount,
+          horizonUrl: networkUrl,
+          networkPassphrase,
+          publicKey,
+          sorobanRpcUrl,
+          tokenA: pool.asset,
+          tokenB: secondaryAsset,
+        })
+      } else {
+        // Lending pools or unsupported pairs → mock supply tx
+        result = await executeMockTestnetSupply({
+          amount,
+          asset: pool.asset,
+          horizonUrl: networkUrl,
+          networkPassphrase,
+          protocol: pool.protocol,
+          publicKey,
+        })
+      }
+
       setTxState('submitted')
       setTxHash(result.hash)
       onPositionAdded({
@@ -713,7 +842,8 @@ function StakeTicket({
     if (txState === 'signing') return 'Waiting for Freighter…'
     if (!isConnected) return 'Connect wallet'
     if (!isTestnet) return 'Switch to Testnet'
-    return `Sign demo · ${amount} ${pool.asset}`
+    if (isLP) return `Add liquidity · ${amount} ${pool.asset}`
+    return `Sign & supply · ${amount} ${pool.asset}`
   }
 
   return (
@@ -777,6 +907,24 @@ function StakeTicket({
         type="range"
         value={amount}
       />
+
+      {isLP && secondaryAsset && amount > 0 && (
+        <div className="mt-3 flex items-center justify-between rounded-xl border border-[#6B7B6B]/15 bg-[#F5F0E8]/60 px-4 py-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">Paired amount</p>
+            <p className="mt-0.5 text-sm font-semibold text-[#1A2E1A]">
+              {secondaryAmount.toFixed(4)}{' '}
+              <span className="font-normal text-[#6B7B6B]">{secondaryAsset}</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">Est. ratio</p>
+            <p className="mt-0.5 font-terminal text-xs text-[#6B7B6B]">
+              1 {pool.asset} ≈ {(secondaryAmount / amount).toFixed(4)} {secondaryAsset}
+            </p>
+          </div>
+        </div>
+      )}
 
       {!isTestnet && isConnected && (
         <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#C8A84B]/25 bg-[#C8A84B]/8 p-3 text-sm text-[#1A2E1A]">
@@ -961,6 +1109,445 @@ function TicketStat({ label, mono, value }: { label: string; mono?: boolean; val
       <p className={`mt-0.5 text-sm font-semibold text-[#1A2E1A] ${mono ? 'font-terminal' : ''}`}>
         {value}
       </p>
+    </div>
+  )
+}
+
+// ─── Bundle Card ──────────────────────────────────────────────────────────────
+
+function BundleCard({
+  bundle,
+  isRecommended,
+  onExecute,
+}: {
+  bundle: YieldBundle
+  isRecommended: boolean
+  onExecute: () => void
+}) {
+  const barColors = ['bg-[#1A2E1A]', 'bg-[#C8A84B]', 'bg-[#4ade80]']
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border transition-all duration-200 ${
+        isRecommended
+          ? `${bundle.borderActive} ${bundle.bgActive} shadow-sm`
+          : 'border-[#6B7B6B]/15 bg-white/50 hover:border-[#6B7B6B]/30'
+      }`}
+    >
+      {isRecommended && (
+        <div className={`absolute right-0 top-0 rounded-bl-xl px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${bundle.bgActive} ${bundle.textColor} border-b border-l ${bundle.borderActive}`}>
+          Recommended
+        </div>
+      )}
+
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className={`size-2 rounded-full ${bundle.dotColor}`} />
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6B7B6B]">
+                {bundle.risk}
+              </p>
+            </div>
+            <h3 className="mt-1.5 text-lg font-bold text-[#1A2E1A]">{bundle.name}</h3>
+            <p className="text-sm text-[#6B7B6B]">{bundle.tagline}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">Est. APY</p>
+            <p className={`mt-0.5 text-xl font-bold ${bundle.textColor}`}>
+              {bundle.estApy.toFixed(1)}%
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-2.5">
+          {bundle.allocations.map((alloc, i) => (
+            <div key={alloc.poolId}>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span className="text-[#6B7B6B]">{alloc.label}</span>
+                <span className="font-semibold text-[#1A2E1A]">{alloc.pct}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[#6B7B6B]/12">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${barColors[i % barColors.length]}`}
+                  style={{ width: `${alloc.pct}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          className={`mt-5 w-full rounded-xl py-2.5 text-sm font-semibold transition-all duration-150 ${
+            isRecommended
+              ? 'bg-[#1A2E1A] text-[#F5F0E8] hover:bg-[#0F1F0F]'
+              : 'border border-[#6B7B6B]/20 bg-white/60 text-[#1A2E1A] hover:border-[#1A2E1A]/30 hover:bg-white/80'
+          }`}
+          onClick={onExecute}
+          type="button"
+        >
+          Execute bundle →
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Bundle Execute Modal ─────────────────────────────────────────────────────
+
+type StepStatus = 'pending' | 'running' | 'done' | 'error'
+
+type ExecStep = {
+  label: string
+  status: StepStatus
+  hash?: string
+  error?: string
+}
+
+function BundleExecuteModal({
+  bundle,
+  onClose,
+  onPositionAdded,
+  usdcBalance,
+}: {
+  bundle: YieldBundle
+  onClose: () => void
+  onPositionAdded: (pos: Omit<LocalPosition, 'id'>) => void
+  usdcBalance: number
+}) {
+  const { networkPassphrase, networkUrl, publicKey, sorobanRpcUrl, status } = useWallet()
+  const [amount, setAmount] = useState(0)
+  const [steps, setSteps] = useState<ExecStep[]>([])
+  const [executing, setExecuting] = useState(false)
+  const [done, setDone] = useState(false)
+
+  const isConnected = status === 'CONNECTED' && Boolean(publicKey) && Boolean(networkUrl) && Boolean(networkPassphrase)
+  const isTestnet = networkPassphrase?.toLowerCase().includes('test') ?? false
+  const canExecute = isConnected && isTestnet && amount > 0
+
+  const maxAmount = usdcBalance
+
+  const preview = bundle.allocations.map((alloc) => ({
+    ...alloc,
+    amount: (amount * alloc.pct) / 100,
+  }))
+
+  const updateStep = (index: number, patch: Partial<ExecStep>) => {
+    setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)))
+  }
+
+  const handleExecute = async () => {
+    if (!canExecute || !publicKey || !networkUrl || !networkPassphrase) return
+
+    const initialSteps: ExecStep[] = bundle.allocations.map((alloc) => ({
+      label: `${alloc.label} — ${((amount * alloc.pct) / 100).toFixed(2)} ${alloc.asset}`,
+      status: 'pending',
+    }))
+    setSteps(initialSteps)
+    setExecuting(true)
+
+    for (let i = 0; i < bundle.allocations.length; i++) {
+      const alloc = bundle.allocations[i]
+      const allocAmount = (amount * alloc.pct) / 100
+
+      updateStep(i, { status: 'running' })
+
+      try {
+        let result: { hash: string; status: string }
+
+        if (alloc.category === 'AMM LP' && sorobanRpcUrl) {
+          const secondaryAmt = estimateSecondaryAmount(alloc.asset, allocAmount)
+          const tokenB = alloc.asset === 'XLM' ? 'USDC' : 'XLM'
+          result = await executeSoroswapAddLiquidity({
+            amountA: allocAmount,
+            amountB: secondaryAmt,
+            horizonUrl: networkUrl,
+            networkPassphrase,
+            publicKey,
+            sorobanRpcUrl,
+            tokenA: alloc.asset,
+            tokenB,
+          })
+        } else {
+          result = await executeMockTestnetSupply({
+            amount: allocAmount,
+            asset: alloc.asset,
+            horizonUrl: networkUrl,
+            networkPassphrase,
+            protocol: bundle.name,
+            publicKey,
+          })
+        }
+
+        updateStep(i, { status: 'done', hash: result.hash })
+
+        onPositionAdded({
+          amount: allocAmount,
+          asset: alloc.asset,
+          hash: result.hash,
+          protocol: alloc.label,
+          status: result.status,
+          timestamp: new Date().toLocaleTimeString(),
+          openedAt: Date.now(),
+          apy: stellarPools.find((p) => p.id === alloc.poolId)?.apy ?? 4,
+          category: alloc.category,
+          poolId: alloc.poolId,
+        })
+      } catch (e) {
+        updateStep(i, {
+          status: 'error',
+          error: e instanceof Error ? e.message : 'Transaction failed.',
+        })
+        break
+      }
+    }
+
+    setExecuting(false)
+    setDone(true)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0F1F0F]/70 backdrop-blur-sm sm:items-center sm:px-4">
+      <button className="absolute inset-0 cursor-default" onClick={onClose} type="button" />
+
+      <div className="relative w-full max-w-lg overflow-hidden rounded-t-3xl border border-[#6B7B6B]/20 bg-[#F5F0E8] shadow-2xl sm:rounded-3xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#6B7B6B]/15 px-6 py-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className={`size-2 rounded-full ${bundle.dotColor}`} />
+              <p className="text-xs uppercase tracking-[0.16em] text-[#6B7B6B]">{bundle.risk}</p>
+            </div>
+            <h2 className="mt-0.5 text-lg font-semibold text-[#1A2E1A]">{bundle.name} Bundle</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-xl font-bold ${bundle.textColor}`}>{bundle.estApy.toFixed(1)}% est.</span>
+            <button
+              className="flex size-8 items-center justify-center rounded-full border border-[#6B7B6B]/20 text-[#6B7B6B] transition hover:border-[#1A2E1A]/30 hover:text-[#1A2E1A]"
+              onClick={onClose}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {!executing && !done && (
+            <>
+              <label className="block text-sm font-medium text-[#1A2E1A]" htmlFor="bundle-amount">
+                Total amount to invest
+              </label>
+              <div className="relative mt-1.5">
+                <input
+                  className="w-full rounded-xl border border-[#6B7B6B]/20 bg-white/65 px-3 py-3 pr-24 text-[#1A2E1A] outline-none transition focus:border-[#C8A84B]"
+                  id="bundle-amount"
+                  max={maxAmount}
+                  min={0}
+                  onChange={(e) => setAmount(Math.min(Number(e.target.value), maxAmount))}
+                  type="number"
+                  value={amount}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center gap-1.5 pr-3">
+                  <span className="text-sm font-medium text-[#6B7B6B]">USDC</span>
+                  <button
+                    className="rounded-md bg-[#C8A84B]/15 px-1.5 py-0.5 text-xs font-semibold text-[#C8A84B] hover:bg-[#C8A84B]/25"
+                    onClick={() => setAmount(maxAmount)}
+                    type="button"
+                  >
+                    Max
+                  </button>
+                </div>
+              </div>
+
+              {amount > 0 && (
+                <div className="mt-4 space-y-2 rounded-xl border border-[#6B7B6B]/15 bg-white/50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6B7B6B]">
+                    Allocation preview
+                  </p>
+                  {preview.map((alloc, i) => {
+                    const barColors = ['bg-[#1A2E1A]', 'bg-[#C8A84B]', 'bg-[#4ade80]']
+                    return (
+                      <div className="flex items-center justify-between gap-4" key={alloc.poolId}>
+                        <div className="flex items-center gap-2">
+                          <span className={`size-2 rounded-full ${barColors[i % barColors.length]}`} />
+                          <span className="text-sm text-[#6B7B6B]">{alloc.label}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-[#1A2E1A]">
+                          {alloc.amount.toFixed(2)} {alloc.asset}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {!isTestnet && isConnected && (
+                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#C8A84B]/25 bg-[#C8A84B]/8 p-3 text-sm text-[#1A2E1A]">
+                  <span className="shrink-0 text-[#C8A84B]">⚠</span>
+                  <p>Switch Freighter to <strong>Testnet</strong> to execute bundles.</p>
+                </div>
+              )}
+
+              <button
+                className="mt-5 w-full rounded-xl bg-[#1A2E1A] py-3.5 text-sm font-semibold text-[#F5F0E8] transition hover:bg-[#0F1F0F] disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!canExecute}
+                onClick={handleExecute}
+                type="button"
+              >
+                {!isConnected ? 'Connect wallet' : !isTestnet ? 'Switch to Testnet' : `Execute ${bundle.allocations.length} transactions →`}
+              </button>
+              <p className="mt-2 text-center text-xs text-[#6B7B6B]">
+                Each allocation is a separate Freighter signature
+              </p>
+            </>
+          )}
+
+          {(executing || done) && steps.length > 0 && (
+            <div>
+              <p className="mb-4 text-sm font-medium text-[#1A2E1A]">
+                {done ? 'Execution complete' : 'Executing bundle…'}
+              </p>
+              <div className="space-y-3">
+                {steps.map((step, i) => (
+                  <div
+                    className={`flex items-start gap-3 rounded-xl border p-4 transition-all duration-300 ${
+                      step.status === 'done'
+                        ? 'border-[#4ade80]/25 bg-[#4ade80]/8'
+                        : step.status === 'running'
+                          ? 'border-[#C8A84B]/25 bg-[#C8A84B]/8'
+                          : step.status === 'error'
+                            ? 'border-red-300/30 bg-red-50/60'
+                            : 'border-[#6B7B6B]/15 bg-white/40'
+                    }`}
+                    key={i}
+                  >
+                    <span
+                      className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        step.status === 'done'
+                          ? 'bg-[#4ade80] text-[#071C09]'
+                          : step.status === 'running'
+                            ? 'bg-[#C8A84B] text-[#1A2E1A]'
+                            : step.status === 'error'
+                              ? 'bg-red-400 text-white'
+                              : 'border border-[#6B7B6B]/20 bg-transparent text-[#6B7B6B]'
+                      }`}
+                    >
+                      {step.status === 'done' ? '✓' : step.status === 'running' ? '…' : step.status === 'error' ? '✗' : String(i + 1)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-[#1A2E1A]">{step.label}</p>
+                      {step.hash && (
+                        <a
+                          className="mt-1 block truncate font-terminal text-xs text-[#6B7B6B] underline underline-offset-4 hover:text-[#1A2E1A]"
+                          href={`https://stellar.expert/explorer/testnet/tx/${step.hash}`}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {step.hash.slice(0, 20)}…
+                        </a>
+                      )}
+                      {step.error && (
+                        <p className="mt-1 text-xs text-red-600">{step.error}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {done && (
+                <button
+                  className="mt-5 w-full rounded-xl bg-[#1A2E1A] py-3 text-sm font-semibold text-[#F5F0E8] transition hover:bg-[#0F1F0F]"
+                  onClick={onClose}
+                  type="button"
+                >
+                  Done — view positions
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Portfolio Allocation ─────────────────────────────────────────────────────
+
+function PortfolioAllocation({
+  positions,
+  riskProfile,
+}: {
+  positions: LocalPosition[]
+  riskProfile: RiskProfile | null
+}) {
+  const totalValue = positions.reduce(
+    (s, p) => s + p.amount * (p.asset === 'USDC' ? 1 : 0.12),
+    0,
+  )
+
+  const categories: { id: string; label: string; color: string; bg: string; target?: number }[] = [
+    { id: 'Lending', label: 'Lending', color: 'bg-[#1A2E1A]', bg: 'bg-[#1A2E1A]/10',
+      target: riskProfile === 'Conservative' ? 100 : riskProfile === 'Moderate' ? 50 : 25 },
+    { id: 'AMM LP', label: 'AMM LP', color: 'bg-[#C8A84B]', bg: 'bg-[#C8A84B]/10',
+      target: riskProfile === 'Conservative' ? 0 : riskProfile === 'Moderate' ? 50 : 40 },
+    { id: 'AMM Rewards', label: 'Rewards', color: 'bg-[#4ade80]', bg: 'bg-[#4ade80]/10',
+      target: riskProfile === 'Conservative' ? 0 : riskProfile === 'Moderate' ? 0 : 35 },
+  ]
+
+  const stats = categories.map((cat) => {
+    const value = positions
+      .filter((p) => p.category === cat.id)
+      .reduce((s, p) => s + p.amount * (p.asset === 'USDC' ? 1 : 0.12), 0)
+    const pct = totalValue > 0 ? (value / totalValue) * 100 : 0
+    return { ...cat, value, pct }
+  }).filter((c) => c.value > 0 || (c.target ?? 0) > 0)
+
+  return (
+    <div className="rounded-2xl border border-[#6B7B6B]/15 bg-white/50 p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <SectionLabel>Portfolio Allocation</SectionLabel>
+        <span className="font-terminal text-xs text-[#6B7B6B]">
+          ~${totalValue.toFixed(0)} total
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {stats.map((cat) => (
+          <div key={cat.id}>
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className={`size-2 rounded-full ${cat.color}`} />
+                <span className="font-medium text-[#1A2E1A]">{cat.label}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {cat.target !== undefined && (
+                  <span className="text-[#6B7B6B]">target {cat.target}%</span>
+                )}
+                <span className="font-semibold text-[#1A2E1A]">{cat.pct.toFixed(0)}%</span>
+              </div>
+            </div>
+            <div className="relative h-2 overflow-hidden rounded-full bg-[#6B7B6B]/12">
+              {cat.target !== undefined && cat.target > 0 && (
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full border-r-2 border-[#6B7B6B]/30 bg-transparent"
+                  style={{ width: `${cat.target}%` }}
+                />
+              )}
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${cat.color}`}
+                style={{ width: `${Math.min(cat.pct, 100)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {riskProfile && (
+        <p className="mt-3 text-[10px] text-[#6B7B6B]">
+          Dashed lines show target allocation for <strong>{riskProfile}</strong> profile
+        </p>
+      )}
     </div>
   )
 }
