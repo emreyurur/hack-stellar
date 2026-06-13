@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Terminal8 API Tester</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-freighter-api/1.5.0/index.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f9f9fa;
+      color: #333;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      border-left: 4px solid #333;
+    }
+
+    h1,
+    h2 {
+      color: #1a1a1a;
+      margin-top: 0;
+    }
+
+    button {
+      background: #000;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #333;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .success {
+      color: #10b981;
+    }
+
+    .error {
+      color: #ef4444;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input,
+    select {
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: #000;
+    }
+
+    .dynamic-section {
+      display: none;
+      padding: 15px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+
+    .active-section {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Terminal8 API Tester</h1>
+  <p>Freighter cüzdanı ile yetkilendirme ve XDR test arayüzü.</p>
+
+  <div class="card">
+    <h2>1. Cüzdan Bağlantısı (Auth)</h2>
+    <button id="btnLogin">Freighter İle Giriş Yap</button>
+    <div id="authStatus" class="status">Bağlantı bekleniyor...</div>
+    <pre id="tokenResult">JWT Token: Yok</pre>
+  </div>
+
+  <div class="card" style="border-left-color: #2563eb;">
+    <h2>2. Portföy ve PnL (Portfolio)</h2>
+    <p>Bağlı cüzdanın anlık havuz pozisyonlarını ve kâr/zarar durumunu backend'den getir.</p>
+    <button id="btnPortfolio" disabled style="background: #2563eb;">Portföyümü Getir</button>
+    <pre id="portfolioResult">Sonuç bekleniyor...</pre>
+  </div>
+
+  <div class="card">
+    <h2>3. İşlem İnşası (Orchestrator)</h2>
+    <p>Deposit veya Withdraw işlemi için XDR oluştur.</p>
+
+    <div class="form-group">
+      <label>Havuz ID (Pool ID)</label>
+      <input type="text" id="poolId" placeholder="Örn: e1f3b..." />
+    </div>
+
+    <div class="form-group">
+      <label>İşlem Tipi (Action)</label>
+      <select id="actionSelect">
+        <option value="DEPOSIT">Likidite Ekle (DEPOSIT)</option>
+        <option value="WITHDRAW">Likidite Çıkar (WITHDRAW)</option>
+      </select>
+    </div>
+
+    <div id="depositInputs" class="dynamic-section active-section">
+      <div class="form-group">
+        <label>Miktar A (Amount A)</label>
+        <input type="number" id="amountA" placeholder="Örn: 100.5" step="0.0000001" value="100.5" />
+      </div>
+      <div class="form-group">
+        <label>Miktar B (Amount B)</label>
+        <input type="number" id="amountB" placeholder="Örn: 250.0" step="0.0000001" value="250.0" />
+      </div>
+    </div>
+
+    <div id="withdrawInputs" class="dynamic-section">
+      <div class="form-group">
+        <label>Havuz Payı (Share Amount)</label>
+        <input type="number" id="shareAmount" placeholder="Örn: 5.25" step="0.0000001" value="5.25" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Slippage (BPS - Baz Puan) (Örn: 50 = %0.5)</label>
+      <input type="number" id="slippageBps" value="50" />
+    </div>
+
+    <button id="btnBuildTx" disabled>XDR İste</button>
+    <pre id="buildResult">Sonuç bekleniyor...</pre>
+
+    <div id="signSubmitSection" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+      <p><strong>XDR Hazır!</strong> Cüzdanla imzalayıp ağa gönderebilirsin.</p>
+      <button id="btnSignAndSubmit" style="background: #10b981;">İmzala ve Gönder</button>
+      <div id="submitStatus" class="status"></div>
+      <pre id="submitResult" style="display: none;"></pre>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000';
+    const HORIZON_URL = 'https://horizon-testnet.stellar.org';
+
+    let jwtToken = null;
+    let userPublicKey = null;
+    let currentPendingTx = null;
+
+    // Arayüz Dinamikleri (Deposit/Withdraw Değişimi)
+    const actionSelect = document.getElementById('actionSelect');
+    const depositInputs = document.getElementById('depositInputs');
+    const withdrawInputs = document.getElementById('withdrawInputs');
+
+    actionSelect.addEventListener('change', (e) => {
+      if (e.target.value === 'DEPOSIT') {
+        depositInputs.classList.add('active-section');
+        withdrawInputs.classList.remove('active-section');
+      } else {
+        withdrawInputs.classList.add('active-section');
+        depositInputs.classList.remove('active-section');
+      }
+    });
+
+    // 1. Auth İşlemi
+    document.getElementById('btnLogin').addEventListener('click', async () => {
+      const authStatus = document.getElementById('authStatus');
+      const tokenResult = document.getElementById('tokenResult');
+
+      try {
+        if (!window.freighterApi.isConnected()) throw new Error('Freighter eklentisi bulunamadı!');
+
+        authStatus.innerText = 'Cüzdan adresi alınıyor...';
+        userPublicKey = await window.freighterApi.getPublicKey();
+
+        authStatus.innerText = 'Challenge isteniyor...';
+        const challengeRes = await fetch(`${API_BASE}/auth/challenge?publicKey=${userPublicKey}`);
+        if (!challengeRes.ok) throw new Error('Challenge alınamadı');
+        const challengeData = await challengeRes.json();
+
+        authStatus.innerText = 'Lütfen Freighter üzerinden imzalayın...';
+        const signedTx = await window.freighterApi.signTransaction(challengeData.transaction, {
+          networkPassphrase: challengeData.networkPassphrase
+        });
+
+        authStatus.innerText = 'İmza doğrulanıyor...';
+        const verifyRes = await fetch(`${API_BASE}/auth/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signedXdr: signedTx })
+        });
+
+        if (!verifyRes.ok) throw new Error('İmza doğrulanamadı');
+        const verifyData = await verifyRes.json();
+
+        jwtToken = verifyData.accessToken;
+        tokenResult.innerText = `JWT Token: ${jwtToken}`;
+        authStatus.className = 'status success';
+        authStatus.innerText = `Bağlantı Başarılı: ${userPublicKey}`;
+
+        // BAŞARILI GİRİŞ SONRASI BUTONLARI AKTİF ET
+        document.getElementById('btnBuildTx').disabled = false;
+        document.getElementById('btnPortfolio').disabled = false;
+
+      } catch (err) {
+        authStatus.className = 'status error';
+        authStatus.innerText = `Hata: ${err.message}`;
+      }
+    });
+
+    // YENİ: Portföy Çekme İşlemi
+    document.getElementById('btnPortfolio').addEventListener('click', async () => {
+      const portfolioResult = document.getElementById('portfolioResult');
+      portfolioResult.innerText = 'Backend\'den portföy verileri çekiliyor...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/portfolio/${userPublicKey}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${jwtToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || JSON.stringify(data));
+        }
+
+        portfolioResult.innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        portfolioResult.innerText = `API Hatası: ${err.message}`;
+      }
+    });
+
+    // 3. İşlem Oluşturma (Orchestrator)
+    document.getElementById('btnBuildTx').addEventListener('click', async () => {
+      const buildResult = document.getElementById('buildResult');
+      buildResult.innerText = 'Yükleniyor...';
+      document.getElementById('signSubmitSection').style.display = 'none';
+
+      try {
+        const action = actionSelect.value;
+        const reqBody = {
+          poolId: document.getElementById('poolId').value,
+          action: action,
+          slippageBps: parseInt(document.getElementById('slippageBps').value) || 0
+        };
+
+        if (action === 'DEPOSIT') {
+          // Eğer NestJS DTO'larını String'e çevirdiysen buradaki parseFloat'ları kaldırıp .toString() yapmayı unutma!
+          reqBody.amountA = parseFloat(document.getElementById('amountA').value);
+          reqBody.amountB = parseFloat(document.getElementById('amountB').value);
+        } else {
+          reqBody.shareAmount = parseFloat(document.getElementById('shareAmount').value);
+        }
+
+        const res = await fetch(`${API_BASE}/api/v1/transactions/build`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${jwtToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(reqBody)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || JSON.stringify(data));
+        }
+
+        buildResult.innerText = JSON.stringify(data, null, 2);
+        currentPendingTx = data;
+        document.getElementById('signSubmitSection').style.display = 'block';
+        document.getElementById('submitStatus').innerText = '';
+        document.getElementById('submitResult').style.display = 'none';
+
+      } catch (err) {
+        buildResult.innerText = `API Hatası: ${err.message}`;
+      }
+    });
+
+    // 4. İmzala ve Ağa Gönder
+    document.getElementById('btnSignAndSubmit').addEventListener('click', async () => {
+      const statusDiv = document.getElementById('submitStatus');
+      const resultPre = document.getElementById('submitResult');
+
+      try {
+        if (!currentPendingTx) return;
+
+        statusDiv.className = 'status';
+        statusDiv.innerText = 'Lütfen Freighter üzerinden işlemi imzalayın...';
+        resultPre.style.display = 'none';
+
+        const signedTx = await window.freighterApi.signTransaction(currentPendingTx.xdr, {
+          networkPassphrase: currentPendingTx.networkPassphrase
+        });
+
+        statusDiv.innerText = 'İmzalandı! Stellar Horizon ağına iletiliyor...';
+
+        const params = new URLSearchParams();
+        params.append('tx', signedTx);
+
+        const submitRes = await fetch(`${HORIZON_URL}/transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        });
+
+        const submitData = await submitRes.json();
+
+        if (!submitRes.ok) {
+          statusDiv.className = 'status error';
+          statusDiv.innerText = 'İşlem ağda başarısız oldu (Tx Failed)!';
+          resultPre.innerText = JSON.stringify(submitData.extras?.result_codes || submitData, null, 2);
+        } else {
+          statusDiv.className = 'status success';
+          statusDiv.innerText = 'İşlem Başarıyla Gerçekleşti! Portföy senkronize ediliyor...';
+          resultPre.innerText = `Hash: ${submitData.hash}\nLedger: ${submitData.ledger}`;
+          
+          // Portfolyo Senkronizasyonu
+          const action = document.getElementById('actionSelect').value;
+          let syncShares = "10.0"; // Demo amaçlı tahmini pool share değeri
+          let syncA = "0";
+          let syncB = "0";
+
+          if (action === 'DEPOSIT') {
+            syncA = document.getElementById('amountA').value;
+            syncB = document.getElementById('amountB').value;
+          } else {
+            syncShares = "-" + document.getElementById('shareAmount').value;
+          }
+
+          try {
+            await fetch(`${API_BASE}/api/v1/portfolio/sync`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${jwtToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                poolId: document.getElementById('poolId').value,
+                sharesAmount: syncShares,
+                assetAAmount: syncA,
+                assetBAmount: syncB
+              })
+            });
+            statusDiv.innerText = 'İşlem Başarılı! Portföy güncellendi. "Portföyümü Getir" e basabilirsiniz.';
+          } catch (e) {
+            console.error('Sync failed', e);
+          }
+        }
+        resultPre.style.display = 'block';
+
+      } catch (err) {
+        statusDiv.className = 'status error';
+        statusDiv.innerText = `Hata: ${err.message}`;
+      }
+    });
+  </script>
+</body>
+
+</html>
