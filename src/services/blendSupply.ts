@@ -1,5 +1,5 @@
 import { PoolContractV2, RequestType } from '@blend-capital/blend-sdk'
-import { signTransaction } from '@stellar/freighter-api'
+import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit'
 import { BASE_FEE, Horizon, TransactionBuilder, rpc, xdr } from '@stellar/stellar-sdk'
 
 const BLEND_TESTNET = {
@@ -68,14 +68,10 @@ export async function executeBlendTestnetSupply({
 
   const rpcServer = new rpc.Server(sorobanRpcUrl)
   const preparedTransaction = await rpcServer.prepareTransaction(transaction)
-  const signed = await signTransaction(preparedTransaction.toXDR(), {
+  const signed = await StellarWalletsKit.signTransaction(preparedTransaction.toXDR(), {
     address: publicKey,
     networkPassphrase,
   })
-
-  if (signed.error) {
-    throw new Error(signed.error.message)
-  }
 
   const signedTransaction = TransactionBuilder.fromXDR(signed.signedTxXdr, networkPassphrase)
   const response = await rpcServer.sendTransaction(signedTransaction)

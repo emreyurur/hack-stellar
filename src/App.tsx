@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ContractPanel } from './components/dashboard/ContractPanel'
 import { DefiOperations } from './components/dashboard/DefiOperations'
 import { Header } from './components/dashboard/Header'
 import { RiskQuiz } from './components/dashboard/RiskQuiz'
@@ -94,15 +95,18 @@ function AppInner() {
         }`}
       >
         {activePage === 'home' ? (
-          <DefiOperations
-            onPositionAdded={handlePositionAdded}
-            onRetakeQuiz={() => setShowQuiz(true)}
-            onWithdrawn={handleWithdrawn}
-            positions={localPositions}
-            riskProfile={riskProfile}
-            usdcBalance={usdcBalance}
-            xlmBalance={xlmBalance}
-          />
+          <div className="space-y-6">
+            <ContractPanel />
+            <DefiOperations
+              onPositionAdded={handlePositionAdded}
+              onRetakeQuiz={() => setShowQuiz(true)}
+              onWithdrawn={handleWithdrawn}
+              positions={localPositions}
+              riskProfile={riskProfile}
+              usdcBalance={usdcBalance}
+              xlmBalance={xlmBalance}
+            />
+          </div>
         ) : (
           <DocsPage />
         )}

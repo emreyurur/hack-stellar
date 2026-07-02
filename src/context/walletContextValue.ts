@@ -1,4 +1,5 @@
 import { createContext } from 'react'
+import type { WalletErrorType } from './WalletContext'
 import type { WalletStatus } from '../types/stellar'
 
 export type WalletContextValue = {
@@ -9,6 +10,7 @@ export type WalletContextValue = {
   sorobanRpcUrl: string | null
   networkUrl: string | null
   error: string | null
+  errorType: WalletErrorType | null
   connect: () => Promise<void>
   reset: () => void
 }

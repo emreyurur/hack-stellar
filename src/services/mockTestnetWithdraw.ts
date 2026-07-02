@@ -1,4 +1,4 @@
-import { signTransaction } from '@stellar/freighter-api'
+import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit'
 import { Asset, BASE_FEE, Horizon, Memo, Operation, TransactionBuilder } from '@stellar/stellar-sdk'
 
 type MockWithdrawParams = {
@@ -44,14 +44,10 @@ export async function executeMockTestnetWithdraw({
     .setTimeout(60)
     .build()
 
-  const signed = await signTransaction(transaction.toXDR(), {
+  const signed = await StellarWalletsKit.signTransaction(transaction.toXDR(), {
     address: publicKey,
     networkPassphrase,
   })
-
-  if (signed.error) {
-    throw new Error(signed.error.message ?? 'Freighter rejected the transaction.')
-  }
 
   const signedTx = TransactionBuilder.fromXDR(signed.signedTxXdr, networkPassphrase)
   const response = await horizon.submitTransaction(signedTx)

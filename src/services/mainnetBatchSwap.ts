@@ -1,4 +1,4 @@
-import { signTransaction } from '@stellar/freighter-api'
+import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit'
 import {
   Asset,
   BASE_FEE,
@@ -126,14 +126,10 @@ export async function executeMainnetBatchSwap({
   }
 
   const transaction = builder.build()
-  const signed = await signTransaction(transaction.toXDR(), {
+  const signed = await StellarWalletsKit.signTransaction(transaction.toXDR(), {
     address: publicKey,
     networkPassphrase,
   })
-
-  if (signed.error) {
-    throw new Error(signed.error.message ?? 'Freighter rejected the batch swap signature.')
-  }
 
   const signedTransaction = TransactionBuilder.fromXDR(
     signed.signedTxXdr,

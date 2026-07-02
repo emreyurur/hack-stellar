@@ -2,9 +2,42 @@
 
 > **One interface for all of Stellar DeFi** — batch swaps, risk-adjusted yield routing, pool reputation scoring, and position management built on Soroban.
 
-[![Live on Testnet](https://img.shields.io/badge/v0.1-Live%20on%20Testnet-4ade80?style=flat-square)](https://terminal8.xyz)
+[![Live on Testnet](https://img.shields.io/badge/v0.2-Live%20on%20Testnet-4ade80?style=flat-square)](https://terminal8.xyz)
 [![Stellar](https://img.shields.io/badge/Stellar-Soroban-C8A84B?style=flat-square)](https://stellar.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square)](https://react.dev)
+
+---
+
+## Level 2 Submission
+
+### Wallet Support
+Multi-wallet integration via **StellarWalletsKit** — supports Freighter, xBull, LOBSTR, and Albedo.
+A wallet selector modal opens on connect, allowing users to choose their preferred wallet.
+
+![Wallet options modal showing Freighter, xBull, LOBSTR, and Albedo](docs/wallet-options.png)
+
+### Deployed Contract (Testnet)
+
+**Terminal8 Counter** — a Soroban smart contract with `increment()`, `get()`, and `reset()` functions.
+
+| | |
+|---|---|
+| **Contract Address** | `CAW6W5RJNLBBOQWVGPT4JALTU7P2M6KWQTWX44P4AHZZTLPE3XDTY43X` |
+| **Deploy TX** | [`141e83905dfee9c191a3b22c7d761be3a99e99894ee27b4df5f61cd6e9d3784a`](https://stellar.expert/explorer/testnet/tx/141e83905dfee9c191a3b22c7d761be3a99e99894ee27b4df5f61cd6e9d3784a) |
+| **First `increment()` TX** | [`c981af52cf7e4f28a0e7934379d18e21490cedeb61e8a39c38330c87a382eb12`](https://stellar.expert/explorer/testnet/tx/c981af52cf7e4f28a0e7934379d18e21490cedeb61e8a39c38330c87a382eb12) |
+| **Explorer** | [View contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAW6W5RJNLBBOQWVGPT4JALTU7P2M6KWQTWX44P4AHZZTLPE3XDTY43X) |
+
+### Error Handling
+Three error types are explicitly classified and shown to the user:
+
+| Error | Trigger | UI message |
+|---|---|---|
+| **Wallet not found** | No wallet extension installed | "Wallet not found. Install Freighter, xBull, or LOBSTR to continue." |
+| **User rejected** | User closes/dismisses wallet modal | "Connection rejected. You closed the wallet dialog." |
+| **Insufficient balance** | Transaction submitted with too few funds | "Insufficient balance. Add funds to your wallet and try again." |
+
+### Transaction Status
+Every contract call shows live status: **pending → success / fail**, with a clickable transaction hash linking to Stellar Expert explorer.
 
 ---
 

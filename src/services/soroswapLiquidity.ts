@@ -1,4 +1,4 @@
-import { signTransaction } from '@stellar/freighter-api'
+import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit'
 import {
   Address,
   BASE_FEE,
@@ -96,14 +96,10 @@ export async function executeSoroswapAddLiquidity({
   const rpcServer = new rpc.Server(sorobanRpcUrl)
   const prepared = await rpcServer.prepareTransaction(tx)
 
-  const signed = await signTransaction(prepared.toXDR(), {
+  const signed = await StellarWalletsKit.signTransaction(prepared.toXDR(), {
     address: publicKey,
     networkPassphrase,
   })
-
-  if (signed.error) {
-    throw new Error(signed.error.message ?? 'Freighter rejected the transaction.')
-  }
 
   const signedTx = TransactionBuilder.fromXDR(signed.signedTxXdr, networkPassphrase)
   const result = await rpcServer.sendTransaction(signedTx)

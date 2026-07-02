@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { reputationLabel, reputationTotal, stellarPools } from '../../data/stellarMock'
 import { useWallet } from '../../context/useWallet'
+import { classifyWalletError } from '../../context/WalletContext'
 import { executeMockTestnetSupply } from '../../services/mockTestnetSupply'
 import { executeMockTestnetWithdraw } from '../../services/mockTestnetWithdraw'
 import { estimateSecondaryAmount, executeSoroswapAddLiquidity } from '../../services/soroswapLiquidity'
@@ -392,8 +393,9 @@ function PositionManageModal({
       setTxState('submitted')
       setTxHash(result.hash)
     } catch (error) {
+      const { message } = classifyWalletError(error)
       setTxState('error')
-      setTxMessage(error instanceof Error ? error.message : 'Transaction failed.')
+      setTxMessage(message)
     }
   }
 
@@ -833,13 +835,14 @@ function StakeTicket({
         poolId: pool.id,
       })
     } catch (error) {
+      const { message } = classifyWalletError(error)
       setTxState('error')
-      setTxMessage(error instanceof Error ? error.message : 'Transaction failed.')
+      setTxMessage(message)
     }
   }
 
   const buttonLabel = () => {
-    if (txState === 'signing') return 'Waiting for Freighter…'
+    if (txState === 'signing') return 'Waiting for wallet…'
     if (!isConnected) return 'Connect wallet'
     if (!isTestnet) return 'Switch to Testnet'
     if (isLP) return `Add liquidity · ${amount} ${pool.asset}`
