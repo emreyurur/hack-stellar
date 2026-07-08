@@ -6,6 +6,7 @@ import {
   callCounterIncrement,
   callCounterGet,
 } from '../../services/counterContract'
+import { useCounterEvents } from '../../hooks/useCounterEvents'
 
 type TxStatus = 'idle' | 'pending' | 'success' | 'fail'
 
@@ -18,6 +19,7 @@ export function ContractPanel() {
   const [txHash, setTxHash] = useState<string | null>(null)
   const [txError, setTxError] = useState<string | null>(null)
   const [counterValue, setCounterValue] = useState<number | null>(null)
+  const { snapshots, isPolling } = useCounterEvents()
 
   const isTestnet = networkPassphrase === TESTNET_PASSPHRASE
   const connected = status === 'CONNECTED' && publicKey
@@ -119,6 +121,37 @@ export function ContractPanel() {
           {/* Transaction status panel */}
           <TxStatusPanel hash={txHash} error={txError} status={txStatus} />
         </div>
+      </div>
+
+      {/* Live event feed */}
+      <div className="mt-6 rounded-xl border border-[#6B7B6B]/15 bg-[#F5F0E8]/40 p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <span
+            className={`size-2 rounded-full ${isPolling ? 'animate-pulse bg-[#4ade80]' : 'bg-[#6B7B6B]/40'}`}
+          />
+          <p className="text-xs uppercase tracking-[0.16em] text-[#6B7B6B]">
+            Live counter stream — polling every 5 s
+          </p>
+        </div>
+        {snapshots.length === 0 ? (
+          <p className="text-sm text-[#6B7B6B]/60">Waiting for on-chain activity…</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {snapshots.map((s, i) => (
+              <li
+                key={s.timestamp.toISOString()}
+                className={`flex items-center justify-between rounded-lg border border-[#6B7B6B]/10 px-3 py-2 font-mono text-xs ${i === 0 ? 'bg-[#4ade80]/10' : 'bg-white/30'}`}
+              >
+                <span className="text-[#1A2E1A]">
+                  counter → <strong>{s.value}</strong>
+                </span>
+                <span className="text-[#6B7B6B]">
+                  {s.timestamp.toLocaleTimeString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   )
