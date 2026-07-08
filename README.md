@@ -2,9 +2,78 @@
 
 > **One interface for all of Stellar DeFi** — batch swaps, risk-adjusted yield routing, pool reputation scoring, and position management built on Soroban.
 
-[![Live on Testnet](https://img.shields.io/badge/v0.2-Live%20on%20Testnet-4ade80?style=flat-square)](https://terminal8.xyz)
+[![Live on Testnet](https://img.shields.io/badge/v0.3-Live%20on%20Testnet-4ade80?style=flat-square)](https://terminal8.xyz)
+[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=flat-square)](https://github.com/terminal8/protocol/actions)
+[![Tests](https://img.shields.io/badge/Tests-Passing-4ade80?style=flat-square)](#testing)
 [![Stellar](https://img.shields.io/badge/Stellar-Soroban-C8A84B?style=flat-square)](https://stellar.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square)](https://react.dev)
+
+---
+
+## Level 3 Submission — Production-Ready dApp
+
+### Advanced Smart Contracts
+
+Two Soroban contracts deployed and communicating with each other on Stellar Testnet:
+
+| Contract | Address | Role |
+|---|---|---|
+| **CounterContract** | `CAW6W5RJNLBBOQWVGPT4JALTU7P2M6KWQTWX44P4AHZZTLPE3XDTY43X` | On-chain counter — emits `counter/incr` events on every state change |
+| **PoolRouter** | *deploy in CI* | Inter-contract router — delegates `increment()` + `batch_increment()` calls to CounterContract and emits `route/incr` events |
+
+**Inter-contract communication:** `PoolRouterContract` calls `increment()` and `get()` on an external `CounterContract` via `env.invoke_contract()`, demonstrating real cross-contract invocation on Soroban.
+
+**Event streaming:** The counter emits on-chain events (`counter/incr`, `counter/reset`) on every state change. The frontend polls the Soroban RPC every 5 seconds and renders a live event feed in the ContractPanel.
+
+### CI/CD Pipeline
+
+GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push and PR:
+
+```
+contract-tests  → cargo test for counter + pool-router contracts
+frontend        → tsc --noEmit → eslint → vitest run → vite build
+```
+
+### Testing
+
+**Smart contract tests** (Rust / Soroban SDK):
+
+```bash
+cd contracts/counter && cargo test
+```
+
+5 passing tests across 2 contracts:
+- `test_counter` — increment, get, reset lifecycle
+- `test_route_increment_delegates_to_counter` — cross-contract increment
+- `test_read_counter_via_router` — cross-contract read
+- `test_route_emits_routing_event` — event emission verification
+- `test_batch_increment` — batch cross-contract calls
+- `test_multiple_routers_share_same_counter` — shared state across router instances
+
+**Frontend tests** (Vitest + Testing Library):
+
+```bash
+npm run test
+```
+
+Tests cover:
+- `ContractPanel` — renders contract address, disabled state when disconnected
+- `classifyWalletError` — wallet error type classification
+- `truncatePublicKey` / `formatCurrency` — utility formatting
+
+### Mobile Responsive UI
+
+The app uses a fully responsive Tailwind CSS layout — single-column on mobile, multi-column grid on desktop. All panels, buttons, and the CLI terminal adapt to any screen width.
+
+### Error Handling & Loading States
+
+| State | UI |
+|---|---|
+| Wallet pending | Pulsing amber dot + "Waiting for wallet signature…" |
+| TX success | Green dot + clickable hash link to Stellar Expert |
+| TX failed | Red dot + classified error message |
+| Live feed polling | Green pulsing dot + "polling every 5 s" indicator |
+| Disconnected | Amber warning card on contract action panel |
 
 ---
 
