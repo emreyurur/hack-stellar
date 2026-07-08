@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(deprecated)] // env.events().publish() is deprecated in SDK v26 but still functional
 use soroban_sdk::{contract, contractimpl, log, symbol_short, Env, Symbol};
 
 const COUNTER: Symbol = symbol_short!("COUNTER");
@@ -15,6 +16,13 @@ impl CounterContract {
         log!(&env, "Terminal8 counter: {}", count);
         env.storage().instance().set(&COUNTER, &count);
         env.storage().instance().extend_ttl(50, 100);
+
+        // Emit event for real-time streaming on the frontend
+        env.events().publish(
+            (symbol_short!("counter"), symbol_short!("incr")),
+            count,
+        );
+
         count
     }
 
@@ -26,6 +34,10 @@ impl CounterContract {
     /// Reset the counter to zero.
     pub fn reset(env: Env) {
         env.storage().instance().set(&COUNTER, &0u32);
+        env.events().publish(
+            (symbol_short!("counter"), symbol_short!("reset")),
+            0u32,
+        );
     }
 }
 

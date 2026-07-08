@@ -1029,6 +1029,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "pool-router"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
