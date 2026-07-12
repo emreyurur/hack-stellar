@@ -3,7 +3,7 @@ import { Asset, BASE_FEE, Horizon, Memo, Operation, TransactionBuilder } from '@
 
 type MockWithdrawParams = {
   amount: number
-  asset: 'XLM' | 'USDC'
+  asset: 'XLM' | 'USDC' | 'EURC'
   horizonUrl: string
   networkPassphrase: string
   publicKey: string

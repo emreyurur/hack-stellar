@@ -9,7 +9,6 @@ import { WalletContext } from './walletContextValue'
 import { classifyWalletError } from '../lib/walletErrors'
 
 export type { WalletErrorType } from '../lib/walletErrors'
-export { classifyWalletError } from '../lib/walletErrors'
 
 // ─── Kit initialisation (once per page load) ──────────────────────────────────
 

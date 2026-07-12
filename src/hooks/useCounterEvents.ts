@@ -20,9 +20,9 @@ export function useCounterEvents() {
 
   useEffect(() => {
     let active = true
-    setIsPolling(true)
 
     async function poll() {
+      setIsPolling(true)
       try {
         const value = await callCounterGet()
         if (!active) return

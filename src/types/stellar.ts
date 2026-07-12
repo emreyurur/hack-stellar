@@ -66,7 +66,7 @@ export type PoolReputation = {
 export type LocalPosition = {
   id: string
   amount: number
-  asset: 'XLM' | 'USDC'
+  asset: 'XLM' | 'USDC' | 'EURC'
   hash: string
   protocol: string
   status: string
@@ -81,13 +81,14 @@ export type DeFiPool = {
   id: string
   protocol: string
   category: 'Lending' | 'AMM LP' | 'AMM Rewards'
-  asset: 'XLM' | 'USDC'
+  asset: 'XLM' | 'USDC' | 'EURC'
   secondaryAsset?: string
   apy: number
   tvl: string
   tvlRaw: number
   utilization?: number
   volume24h?: string
+  feeBp?: number
   reputation: PoolReputation
   risk: RiskProfile
   method: 'supply()' | 'addLiquidity()'

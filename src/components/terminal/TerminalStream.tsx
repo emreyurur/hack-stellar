@@ -16,7 +16,7 @@ export function TerminalStream({
 
   return (
     <div
-      className={`${className} terminal-scroll font-terminal overflow-y-auto rounded-lg border border-[#F5F0E8]/10 bg-black/15 p-4 text-sm`}
+      className={`${className} terminal-scroll font-terminal overflow-y-auto rounded-lg border border-white/[0.12] bg-black/40 p-4 text-sm`}
     >
       <div className="space-y-2">
         {lines.map((line) => {
@@ -39,12 +39,12 @@ export function TerminalStream({
 
           const textColor =
             line.kind === 'success'
-              ? 'text-[#4ade80]'
+              ? 'text-[#16A34A]'
               : line.kind === 'error'
-                ? 'text-red-300'
+                ? 'text-red-400'
                 : line.kind === 'command'
-                  ? 'text-[#C8A84B]'
-                  : 'text-[#F5F0E8]/75'
+                  ? 'text-[#F2C12E]'
+                  : 'text-[#F0F0F0]/80'
 
           return (
             <div className="flex gap-2.5" key={line.id}>
@@ -61,20 +61,20 @@ export function TerminalStream({
 
 function YieldTable() {
   return (
-    <div className="overflow-hidden rounded-md border border-[#F5F0E8]/10">
-      <div className="grid grid-cols-3 bg-[#F5F0E8]/5 px-3 py-2 text-xs uppercase tracking-[0.12em] text-[#6B7B6B]">
+    <div className="overflow-hidden rounded-md border border-white/[0.12]">
+      <div className="grid grid-cols-3 bg-white/[0.04] px-3 py-2 text-xs uppercase tracking-[0.12em] text-[#9CA3AF]">
         <span>Protocol</span>
         <span>Asset</span>
         <span>APY</span>
       </div>
       {getYieldRows().map((row) => (
         <div
-          className="grid grid-cols-3 border-t border-[#F5F0E8]/10 px-3 py-2 text-xs"
+          className="grid grid-cols-3 border-t border-white/[0.08] px-3 py-2 text-xs"
           key={row.sorobanContract}
         >
-          <span className="text-[#F5F0E8]/80">{row.protocol}</span>
-          <span className="text-[#F5F0E8]/80">{row.asset}</span>
-          <span className="text-[#4ade80]">{row.apy.toFixed(1)}%</span>
+          <span className="text-[#F0F0F0]/90">{row.protocol}</span>
+          <span className="text-[#F0F0F0]/90">{row.asset}</span>
+          <span className="text-[#16A34A]">{row.apy.toFixed(1)}%</span>
         </div>
       ))}
     </div>
@@ -119,22 +119,22 @@ function HelpBlock() {
   ]
 
   return (
-    <div className="space-y-3 rounded-lg border border-[#C8A84B]/20 bg-[#C8A84B]/6 p-4">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#C8A84B]">
+    <div className="space-y-3 rounded-lg border border-[#F2C12E]/25 bg-[#F2C12E]/10 p-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F2C12E]">
         Command Reference
       </p>
       {groups.map((group) => (
         <div key={group.label}>
-          <p className="mb-1.5 text-[10px] uppercase tracking-[0.14em] text-[#F5F0E8]/40">
+          <p className="mb-1.5 text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">
             {group.label}
           </p>
           <div className="space-y-1">
             {group.cmds.map(({ cmd, desc }) => (
               <div className="flex items-baseline gap-3" key={cmd}>
-                <code className="w-44 shrink-0 rounded bg-[#0F1F0F] px-2 py-0.5 text-xs text-[#C8A84B]">
+                <code className="w-44 shrink-0 rounded bg-[#12121A] px-2 py-0.5 text-xs text-[#F2C12E]">
                   {cmd}
                 </code>
-                <span className="text-xs text-[#F5F0E8]/50">{desc}</span>
+                <span className="text-xs text-[#9CA3AF]">{desc}</span>
               </div>
             ))}
           </div>

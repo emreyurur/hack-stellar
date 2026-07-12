@@ -55,20 +55,20 @@ const profileMeta: Record<
 > = {
   Conservative: {
     description: 'Stable lending pools with predictable yields and lower exposure.',
-    color: 'text-[#4ade80]',
-    dotColor: 'bg-[#4ade80]',
+    color: 'text-[#16A34A]',
+    dotColor: 'bg-[#16A34A]',
     emoji: '🛡️',
   },
   Moderate: {
     description: 'A balanced mix of lending and LP positions for solid risk-adjusted returns.',
-    color: 'text-[#C8A84B]',
-    dotColor: 'bg-[#C8A84B]',
+    color: 'text-[#F2C12E]',
+    dotColor: 'bg-[#F2C12E]',
     emoji: '⚖️',
   },
   Aggressive: {
     description: 'High-yield LP and rewards. Higher APY comes with more market exposure.',
-    color: 'text-orange-400',
-    dotColor: 'bg-orange-400',
+    color: 'text-[#F97316]',
+    dotColor: 'bg-[#F97316]',
     emoji: '🚀',
   },
 }
@@ -106,17 +106,17 @@ export function RiskQuiz({
   if (result) {
     const meta = profileMeta[result]
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F1F0F]/75 px-4 backdrop-blur-sm">
-        <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-[#6B7B6B]/20 bg-[#F5F0E8] shadow-2xl">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0D0D12]/80 px-4 backdrop-blur-sm">
+        <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.12] bg-[#14141E] shadow-2xl">
           <div className="p-8 text-center">
             <div className="mb-4 text-5xl">{meta.emoji}</div>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#6B7B6B]">Your risk profile</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#9CA3AF]">Your risk profile</p>
             <h2 className={`mt-2 text-4xl font-bold ${meta.color}`}>{result}</h2>
-            <p className="mt-3 text-sm leading-relaxed text-[#6B7B6B]">{meta.description}</p>
+            <p className="mt-3 text-sm leading-relaxed text-[#9CA3AF]">{meta.description}</p>
           </div>
-          <div className="border-t border-[#6B7B6B]/15 p-6">
+          <div className="border-t border-white/[0.08] p-6">
             <button
-              className="w-full rounded-xl bg-[#1A2E1A] py-3.5 text-sm font-semibold text-[#F5F0E8] transition duration-150 hover:bg-[#0F1F0F]"
+              className="w-full rounded-xl bg-[#F2C12E] py-3.5 text-sm font-semibold text-[#0D0D12] transition duration-150 hover:bg-[#F2C12E]/90"
               onClick={() => onComplete(result)}
               type="button"
             >
@@ -129,15 +129,15 @@ export function RiskQuiz({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F1F0F]/75 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-[#6B7B6B]/20 bg-[#F5F0E8] shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0D0D12]/80 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.12] bg-[#14141E] shadow-2xl">
         <div className="p-6 pb-0">
           <div className="mb-5 flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.18em] text-[#6B7B6B]">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#9CA3AF]">
               Risk assessment · {step + 1}/{totalSteps}
             </p>
             <button
-              className="text-xs text-[#6B7B6B] underline underline-offset-4 transition hover:text-[#1A2E1A]"
+              className="text-xs text-[#9CA3AF] underline underline-offset-4 transition hover:text-[#F0F0F0]"
               onClick={onSkip}
               type="button"
             >
@@ -149,14 +149,14 @@ export function RiskQuiz({
             {questions.map((_, i) => (
               <div
                 className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                  i <= step ? 'bg-[#1A2E1A]' : 'bg-[#6B7B6B]/20'
+                  i <= step ? 'bg-[#F2C12E]' : 'bg-white/[0.12]'
                 }`}
                 key={i}
               />
             ))}
           </div>
 
-          <h2 className="text-xl font-semibold leading-snug text-[#1A2E1A]">
+          <h2 className="text-xl font-semibold leading-snug text-[#F0F0F0]">
             {currentQuestion.question}
           </h2>
         </div>
@@ -168,8 +168,8 @@ export function RiskQuiz({
               <button
                 className={`w-full rounded-xl border p-4 text-left transition-all duration-150 ${
                   isSelected
-                    ? 'border-[#1A2E1A] bg-[#1A2E1A] text-[#F5F0E8]'
-                    : 'border-[#6B7B6B]/20 bg-white/60 text-[#1A2E1A] hover:border-[#1A2E1A]/30 hover:bg-white/80'
+                    ? 'border-[#F2C12E] bg-[#F2C12E] text-[#0D0D12]'
+                    : 'border-white/[0.12] bg-white/[0.04] text-[#F0F0F0] hover:border-white/[0.2] hover:bg-white/[0.08]'
                 }`}
                 key={option.label}
                 onClick={() => setSelected(option.score)}
@@ -179,7 +179,7 @@ export function RiskQuiz({
                   <div>
                     <p className="font-semibold">{option.label}</p>
                     <p
-                      className={`mt-0.5 text-sm ${isSelected ? 'text-[#F5F0E8]/60' : 'text-[#6B7B6B]'}`}
+                      className={`mt-0.5 text-sm ${isSelected ? 'text-[#0D0D12]/70' : 'text-[#9CA3AF]'}`}
                     >
                       {option.description}
                     </p>
@@ -187,8 +187,8 @@ export function RiskQuiz({
                   <span
                     className={`flex size-5 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all duration-150 ${
                       isSelected
-                        ? 'border-[#F5F0E8]/30 bg-[#F5F0E8]/15 text-[#F5F0E8]'
-                        : 'border-[#6B7B6B]/30 bg-transparent'
+                        ? 'border-[#0D0D12]/30 bg-[#0D0D12]/15 text-[#0D0D12]'
+                        : 'border-white/[0.2] bg-transparent'
                     }`}
                   >
                     {isSelected ? '✓' : ''}
@@ -199,9 +199,9 @@ export function RiskQuiz({
           })}
         </div>
 
-        <div className="border-t border-[#6B7B6B]/15 p-6 pt-0">
+        <div className="border-t border-white/[0.08] p-6 pt-0">
           <button
-            className="w-full rounded-xl bg-[#1A2E1A] py-3.5 text-sm font-semibold text-[#F5F0E8] transition duration-150 hover:bg-[#0F1F0F] disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-xl bg-[#F2C12E] py-3.5 text-sm font-semibold text-[#0D0D12] transition duration-150 hover:bg-[#F2C12E]/90 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={selected === null}
             onClick={handleContinue}
             type="button"

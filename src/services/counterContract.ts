@@ -7,7 +7,7 @@ import {
   TransactionBuilder,
   xdr,
 } from '@stellar/stellar-sdk'
-import { classifyWalletError } from '../context/WalletContext'
+import { classifyWalletError } from '../lib/walletErrors'
 
 // Terminal8 Counter contract deployed on Stellar Testnet
 // Deploy TX: 141e83905dfee9c191a3b22c7d761be3a99e99894ee27b4df5f61cd6e9d3784a
@@ -49,7 +49,7 @@ export async function callCounterIncrement(publicKey: string): Promise<CounterRe
     })
   } catch (err) {
     const { message } = classifyWalletError(err)
-    throw new Error(message)
+    throw new Error(message, { cause: err })
   }
 
   const signedTx = TransactionBuilder.fromXDR(signed.signedTxXdr, TESTNET_PASSPHRASE)

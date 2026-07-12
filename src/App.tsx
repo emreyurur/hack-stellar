@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ContractPanel } from './components/dashboard/ContractPanel'
 import { DefiOperations } from './components/dashboard/DefiOperations'
 import { Header } from './components/dashboard/Header'
 import { RiskQuiz } from './components/dashboard/RiskQuiz'
 import { DocsPage } from './components/docs/DocsPage'
+import { LandingPage } from './components/landing/LandingPage'
 import { BottomTerminal, CommandPalette } from './components/terminal/CommandPalette'
 import type { CommandContext, TerminalLine } from './components/terminal/commandRegistry'
 import { WalletProvider } from './context/WalletContext'
@@ -12,7 +12,7 @@ import { useWalletBalances } from './hooks/useWalletBalances'
 import { demoPositions } from './data/stellarMock'
 import type { LocalPosition, RiskProfile } from './types/stellar'
 
-type AppPage = 'home' | 'docs'
+export type AppPage = 'landing' | 'home' | 'docs'
 
 const initialLines: TerminalLine[] = [
   { id: 'boot-1', kind: 'log', text: 'Soroban RPC ready. Type help for commands.' },
@@ -23,25 +23,26 @@ function AppInner() {
   const { networkPassphrase, networkUrl, publicKey, status } = useWallet()
   const { balances } = useWalletBalances()
 
-  const [activePage, setActivePage] = useState<AppPage>('home')
+  const [activePage, setActivePage] = useState<AppPage>('landing')
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [terminalOpen, setTerminalOpen] = useState(true)
+  const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>(initialLines)
-  const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null)
+  const [riskProfile, setRiskProfile] = useState<RiskProfile | null>('Moderate')
   const [showQuiz, setShowQuiz] = useState(false)
   const [localPositions, setLocalPositions] = useState<LocalPosition[]>(demoPositions)
 
   useEffect(() => {
-    if (status === 'CONNECTED' && riskProfile === null) setShowQuiz(true)
-  }, [status, riskProfile])
-
-  useEffect(() => {
+    let lastCtrlKTime = 0
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
+        lastCtrlKTime = Date.now()
         setPaletteOpen((v) => !v)
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+      if (
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') ||
+        (e.key.toLowerCase() === 'j' && Date.now() - lastCtrlKTime < 1500)
+      ) {
         e.preventDefault()
         setTerminalOpen((v) => !v)
       }
@@ -85,9 +86,22 @@ function AppInner() {
     [networkPassphrase, networkUrl, localPositions, publicKey, status, xlmBalance, usdcBalance, handleWithdrawn],
   )
 
+  if (activePage === 'landing') {
+    return (
+      <LandingPage
+        onLaunch={() => setActivePage('home')}
+        onOpenDocs={() => setActivePage('docs')}
+      />
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-[#F5F0E8] text-[#1A2E1A]">
-      <Header activePage={activePage} onPageChange={setActivePage} />
+    <div className="min-h-screen bg-[#0A0A0E] text-[#F0F0F0]">
+      <Header
+        activePage={activePage}
+        onPageChange={setActivePage}
+        onToggleTerminal={() => setTerminalOpen(true)}
+      />
 
       <main
         className={`mx-auto w-full max-w-[1440px] px-5 py-6 sm:px-8 ${
@@ -96,7 +110,6 @@ function AppInner() {
       >
         {activePage === 'home' ? (
           <div className="space-y-6">
-            <ContractPanel />
             <DefiOperations
               onPositionAdded={handlePositionAdded}
               onRetakeQuiz={() => setShowQuiz(true)}

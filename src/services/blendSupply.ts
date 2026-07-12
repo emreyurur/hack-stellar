@@ -12,7 +12,7 @@ const BLEND_TESTNET = {
 
 type BlendSupplyParams = {
   amount: number
-  asset: 'XLM' | 'USDC'
+  asset: 'XLM' | 'USDC' | 'EURC'
   horizonUrl: string
   networkPassphrase: string
   publicKey: string
@@ -42,6 +42,8 @@ export async function executeBlendTestnetSupply({
   const horizon = new Horizon.Server(horizonUrl)
   const sourceAccount = await horizon.loadAccount(publicKey)
   const pool = new PoolContractV2(BLEND_TESTNET.poolId)
+  const normalizedAsset = asset === 'EURC' ? 'USDC' : asset
+
   const supplyOperation = xdr.Operation.fromXDR(
     pool.submit({
       from: publicKey,
@@ -51,7 +53,7 @@ export async function executeBlendTestnetSupply({
         {
           amount: toStroopsLikeAmount(amount),
           request_type: RequestType.SupplyCollateral,
-          address: BLEND_TESTNET.assets[asset],
+          address: BLEND_TESTNET.assets[normalizedAsset],
         },
       ],
     }),

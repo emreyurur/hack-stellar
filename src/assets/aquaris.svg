@@ -1,0 +1,22 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="400.000000pt" height="400.000000pt" viewBox="0 0 400.000000 400.000000"
+ preserveAspectRatio="xMidYMid meet">
+
+<!-- Pure white background so the cutout waves show up crisp and bright white -->
+<rect width="400" height="400" fill="#FFFFFF" />
+
+<g transform="translate(0.000000,400.000000) scale(0.100000,-0.100000)"
+fill="#06B6D4" stroke="none">
+<path d="M0 2000 l0 -2000 2000 0 2000 0 0 2000 0 2000 -2000 0 -2000 0 0
+-2000z m2810 625 l185 185 83 -83 82 -82 -270 -270 -270 -270 -188 188 -187
+187 -295 -295 -295 -295 -160 160 -160 160 -190 -190 -190 -190 -82 82 -83 83
+272 272 273 273 160 -160 160 -160 294 294 294 294 191 -184 191 -184 185 185z
+m-2 -632 l187 187 83 -83 82 -82 -270 -270 -270 -270 -188 188 -187 187 -295
+-295 -295 -295 -160 160 -160 160 -190 -190 -190 -189 -83 81 -83 82 268 268
+c147 147 272 268 278 268 5 0 80 -70 165 -155 l155 -155 295 295 295 295 187
+-187 188 -188 188 188z"/>
+</g>
+</svg>

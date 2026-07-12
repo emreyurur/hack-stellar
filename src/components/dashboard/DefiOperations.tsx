@@ -1,83 +1,77 @@
 import { useState, type ReactNode } from 'react'
+import xlmLogo from '../../assets/xlm.svg'
+import usdcLogo from '../../assets/usdc.svg'
+import aquaLogo from '../../assets/aquaris.svg'
 import { reputationLabel, reputationTotal, stellarPools } from '../../data/stellarMock'
 import { useWallet } from '../../context/useWallet'
-import { classifyWalletError } from '../../context/WalletContext'
+import { classifyWalletError } from '../../lib/walletErrors'
 import { executeMockTestnetSupply } from '../../services/mockTestnetSupply'
 import { executeMockTestnetWithdraw } from '../../services/mockTestnetWithdraw'
 import { estimateSecondaryAmount, executeSoroswapAddLiquidity } from '../../services/soroswapLiquidity'
 import type { DeFiPool, LocalPosition, RiskProfile } from '../../types/stellar'
+import { PoolDetailsView } from './PoolDetailsView'
 
-// ─── Bundle definitions ───────────────────────────────────────────────────────
-
-type BundleAlloc = {
-  poolId: string
-  label: string
-  pct: number
-  category: 'Lending' | 'AMM LP' | 'AMM Rewards'
-  asset: 'XLM' | 'USDC'
+function getNowTimestamp(): number {
+  return Date.now()
 }
 
-type YieldBundle = {
-  id: string
-  name: string
-  tagline: string
-  risk: RiskProfile
-  estApy: number
-  dotColor: string
-  borderActive: string
-  bgActive: string
-  textColor: string
-  allocations: BundleAlloc[]
+// ─── Token Avatars Helper ────────────────────────────────────────────────────────
+const TOKEN_COLORS: Record<string, string> = {
+  XLM: '#3b82f6',
+  USDC: '#10b981',
+  AQUA: '#06b6d4',
+  BTC: '#f59e0b',
+  ETH: '#8b5cf6',
+  EURC: '#6366f1',
 }
 
-const BUNDLES: YieldBundle[] = [
-  {
-    id: 'conservative',
-    name: 'Conservative',
-    tagline: 'Capital protection first',
-    risk: 'Conservative',
-    estApy: 4.6,
-    dotColor: 'bg-[#4ade80]',
-    borderActive: 'border-[#4ade80]/40',
-    bgActive: 'bg-[#4ade80]/8',
-    textColor: 'text-[#4ade80]',
-    allocations: [
-      { poolId: 'blend-usdc-lending', label: 'Blend USDC Lending', pct: 80, category: 'Lending', asset: 'USDC' },
-      { poolId: 'blend-xlm-lending',  label: 'Blend XLM Lending',  pct: 20, category: 'Lending', asset: 'XLM' },
-    ],
-  },
-  {
-    id: 'balanced',
-    name: 'Balanced',
-    tagline: 'Lending + LP exposure',
-    risk: 'Moderate',
-    estApy: 7.8,
-    dotColor: 'bg-[#C8A84B]',
-    borderActive: 'border-[#C8A84B]/40',
-    bgActive: 'bg-[#C8A84B]/8',
-    textColor: 'text-[#C8A84B]',
-    allocations: [
-      { poolId: 'blend-usdc-lending', label: 'Blend USDC Lending',   pct: 50, category: 'Lending', asset: 'USDC' },
-      { poolId: 'soroswap-xlm-usdc',  label: 'Soroswap XLM/USDC LP', pct: 50, category: 'AMM LP', asset: 'XLM' },
-    ],
-  },
-  {
-    id: 'growth',
-    name: 'Growth',
-    tagline: 'Maximum yield exposure',
-    risk: 'Aggressive',
-    estApy: 12.4,
-    dotColor: 'bg-orange-400',
-    borderActive: 'border-orange-400/35',
-    bgActive: 'bg-orange-400/6',
-    textColor: 'text-orange-400',
-    allocations: [
-      { poolId: 'blend-usdc-lending', label: 'Blend USDC Lending',   pct: 25, category: 'Lending', asset: 'USDC' },
-      { poolId: 'soroswap-xlm-usdc',  label: 'Soroswap XLM/USDC LP', pct: 40, category: 'AMM LP', asset: 'XLM' },
-      { poolId: 'aquarius-aqua-xlm',  label: 'Aquarius AQUA/XLM',    pct: 35, category: 'AMM Rewards', asset: 'XLM' },
-    ],
-  },
-]
+function tokenBg(code: string): string {
+  if (TOKEN_COLORS[code]) return TOKEN_COLORS[code]
+  const palette = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
+  let h = 0
+  for (let i = 0; i < code.length; i++) h = (h * 31 + code.charCodeAt(i)) & 0xfff
+  return palette[h % palette.length]
+}
+
+function TokenAvatar({ code }: { code: string; size?: string }) {
+  const upper = code.toUpperCase()
+  if (upper === 'XLM' || upper === 'YXLM') {
+    return (
+      <img
+        alt={code}
+        className="size-7 shrink-0 rounded-full bg-[#12121A] p-0.5 ring-2 ring-[#0D0D12]"
+        src={xlmLogo}
+      />
+    )
+  }
+  if (upper === 'USDC') {
+    return (
+      <img
+        alt={code}
+        className="size-7 shrink-0 rounded-full bg-[#12121A] p-0.5 ring-2 ring-[#0D0D12]"
+        src={usdcLogo}
+      />
+    )
+  }
+  if (upper === 'AQUA') {
+    return (
+      <img
+        alt={code}
+        className="size-7 shrink-0 rounded-full bg-[#12121A] p-0.5 ring-2 ring-[#0D0D12]"
+        src={aquaLogo}
+      />
+    )
+  }
+
+  return (
+    <div
+      className="flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ring-2 ring-[#0D0D12]"
+      style={{ backgroundColor: tokenBg(code) }}
+    >
+      {code.slice(0, 3)}
+    </div>
+  )
+}
 
 export function DefiOperations({
   onPositionAdded,
@@ -96,184 +90,469 @@ export function DefiOperations({
   usdcBalance: number
   xlmBalance: number
 }) {
-  const { status } = useWallet()
+  void onRetakeQuiz
+  void onWithdrawn
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null)
+  const [detailTab, setDetailTab] = useState<'overview' | 'position'>('overview')
   const [expandedReputation, setExpandedReputation] = useState<string | null>(null)
-  const [managingPosition, setManagingPosition] = useState<LocalPosition | null>(null)
-  const [executingBundle, setExecutingBundle] = useState<YieldBundle | null>(null)
+  const [filterTab, setFilterTab] = useState<'all' | 'stables' | 'xlm'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const recommended = riskProfile ? stellarPools.filter((p) => p.risk === riskProfile) : []
-  const others = riskProfile ? stellarPools.filter((p) => p.risk !== riskProfile) : stellarPools
+  const filteredPools = stellarPools.filter((pool) => {
+    const pairStr = `${pool.asset} ${pool.secondaryAsset ?? ''} ${pool.protocol}`.toLowerCase()
+    if (searchQuery && !pairStr.includes(searchQuery.toLowerCase())) return false
+    if (filterTab === 'xlm') return pool.asset === 'XLM' || pool.secondaryAsset === 'XLM'
+    if (filterTab === 'stables') {
+      const stables = ['USDC', 'EURC', 'USDT', 'DAI']
+      return stables.includes(pool.asset) || (pool.secondaryAsset && stables.includes(pool.secondaryAsset))
+    }
+    return true
+  })
+
   const selectedPool = stellarPools.find((p) => p.id === selectedPoolId) ?? null
+  const featuredPools = stellarPools.slice(0, 3)
+
+  if (selectedPool) {
+    return (
+      <PoolDetailsView
+        available={selectedPool.asset === 'XLM' ? xlmBalance : usdcBalance}
+        initialTab={detailTab}
+        onBack={() => setSelectedPoolId(null)}
+        onPositionAdded={(pos) => {
+          onPositionAdded(pos)
+        }}
+        pool={selectedPool}
+        userPositions={positions.filter((p) => p.poolId === selectedPool.id || p.asset === selectedPool.asset)}
+      />
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-[#6B7B6B]">Stellar DeFi</p>
-          <h1 className="mt-1 text-3xl font-semibold text-[#1A2E1A]">DeFi Opportunities</h1>
-        </div>
-
-        {status === 'CONNECTED' && (
-          <PortfolioWidget
-            onRetakeQuiz={onRetakeQuiz}
-            riskProfile={riskProfile}
-            usdcBalance={usdcBalance}
-            xlmBalance={xlmBalance}
-          />
-        )}
-      </div>
-
-      <div className={selectedPool ? 'grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]' : ''}>
-        <div className="space-y-8">
+    <div className="space-y-8">
+      {/* Kamino-Style Positions Section (My Overview) */}
           {positions.length > 0 && (
-            <div>
-              <div className="mb-3 flex items-center gap-3">
-                <SectionLabel>Open positions</SectionLabel>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#4ade80]/30 bg-[#4ade80]/10 px-2.5 py-0.5 text-xs font-semibold text-[#1A2E1A]">
-                  <span className="relative flex size-1.5">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#4ade80] opacity-60" />
-                    <span className="relative inline-flex size-1.5 rounded-full bg-[#4ade80]" />
-                  </span>
-                  {positions.length} live
+            <div className="space-y-6">
+              {/* Header Title */}
+              <div>
+                <h2 className="text-2xl font-bold text-white">Lending & Yield Positions</h2>
+                <p className="mt-1 text-sm text-[#9CA3AF]">
+                  Earn yield via curated vaults on Stellar DeFi.
+                </p>
+              </div>
+
+              {/* Sub-tabs */}
+              <div className="flex gap-6 border-b border-white/[0.08]">
+                <span className="relative pb-3 text-sm font-semibold text-white">
+                  My Overview
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[#3B82F6]" />
                 </span>
               </div>
-              <div className="space-y-3">
-                {positions.map((pos) => (
-                  <PositionCard
-                    key={pos.id}
-                    onManage={() => setManagingPosition(pos)}
-                    position={pos}
-                  />
-                ))}
+
+              {/* 4 Summary Cards Row */}
+              {(() => {
+                const totalValUsd = positions.reduce((acc, p) => {
+                  const price = p.asset === 'XLM' ? 0.12 : 1
+                  return acc + p.amount * price
+                }, 0)
+                const weightedApy = totalValUsd > 0
+                  ? positions.reduce((acc, p) => {
+                      const price = p.asset === 'XLM' ? 0.12 : 1
+                      return acc + (p.amount * price * p.apy)
+                    }, 0) / totalValUsd
+                  : positions.reduce((acc, p) => acc + p.apy, 0) / positions.length
+                const totalEarnedUsd = positions.reduce((acc, p) => {
+                  const price = p.asset === 'XLM' ? 0.12 : 1
+                  const elapsed = Date.now() - p.openedAt
+                  const hours = elapsed / 3_600_000
+                  const earned = p.amount * (p.apy / 100) * (hours / 8760)
+                  return acc + earned * price
+                }, 0)
+
+                return (
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
+                      <p className="text-xs text-[#9CA3AF]">Active Positions</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-white">{positions.length}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
+                      <p className="text-xs text-[#9CA3AF]">Positions Value</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-white">${totalValUsd.toFixed(2)}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
+                      <p className="text-xs text-[#9CA3AF]">Avg APY</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">{weightedApy.toFixed(2)}%</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
+                      <p className="text-xs text-[#9CA3AF]">Interest Earned</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">+${totalEarnedUsd.toFixed(4)}</p>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Positions Table Container */}
+              <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#111119]">
+                <div className="min-w-[760px]">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-[minmax(0,2.4fr)_140px_120px_140px_150px_100px] items-center gap-4 border-b border-white/[0.08] px-6 py-3.5 text-xs font-semibold text-[#9CA3AF]">
+                    <span>Asset</span>
+                    <span>Position Value</span>
+                    <span>Supply APY</span>
+                    <span>Interest Earned</span>
+                    <span>Vault Profile</span>
+                    <span />
+                  </div>
+
+                  {/* Table Rows */}
+                  <div className="divide-y divide-white/[0.06]">
+                    {positions.map((pos) => {
+                      const matchingPool = stellarPools.find((p) => p.id === pos.poolId || p.asset === pos.asset) ?? stellarPools[0]
+                      const price = pos.asset === 'XLM' ? 0.12 : 1
+                      const posValUsd = pos.amount * price
+                      const elapsed = getNowTimestamp() - pos.openedAt
+                      const hours = elapsed / 3_600_000
+                      const earned = pos.amount * (pos.apy / 100) * (hours / 8760)
+                      const earnedUsd = earned * price
+
+                      return (
+                        <div
+                          key={pos.id}
+                          className="grid grid-cols-[minmax(0,2.4fr)_140px_120px_140px_150px_100px] items-center gap-4 px-6 py-4 transition hover:bg-white/[0.02]"
+                        >
+                          {/* Asset */}
+                          <div className="flex items-center gap-3">
+                            <TokenAvatar code={pos.asset} size="md" />
+                            <div>
+                              <p className="text-sm font-bold text-white">
+                                {matchingPool.protocol} {pos.asset}
+                              </p>
+                              <p className="text-xs text-[#9CA3AF]">{matchingPool.protocol} Protocol</p>
+                            </div>
+                          </div>
+
+                          {/* Position Value */}
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              {pos.amount.toFixed(2)} {pos.asset}
+                            </p>
+                            <p className="text-xs text-[#9CA3AF]">${posValUsd.toFixed(2)}</p>
+                          </div>
+
+                          {/* Supply APY */}
+                          <div>
+                            <span className="text-sm font-bold text-[#16A34A]">
+                              {pos.apy.toFixed(2)}%
+                            </span>
+                          </div>
+
+                          {/* Interest Earned */}
+                          <div>
+                            <p className="text-sm font-semibold text-[#16A34A]">
+                              +{earned.toFixed(4)} {pos.asset}
+                            </p>
+                            <p className="text-xs text-[#9CA3AF]">+${earnedUsd.toFixed(4)}</p>
+                          </div>
+
+                          {/* Vault Profile */}
+                          <div>
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.10] bg-white/[0.04] px-3 py-1 text-xs font-medium text-white">
+                              <svg className="size-4 shrink-0 text-[#22C55E]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                              </svg>
+                              {matchingPool.risk === 'Moderate' ? 'Conservative' : matchingPool.risk}
+                            </span>
+                          </div>
+
+                          {/* Action Button */}
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => {
+                                setDetailTab('overview')
+                                setSelectedPoolId(matchingPool.id)
+                              }}
+                              className="rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/[0.15]"
+                              type="button"
+                            >
+                              Manage
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {positions.length > 1 && (
-            <PortfolioAllocation positions={positions} riskProfile={riskProfile} />
-          )}
-
+          {/* Kamino-Style Featured Strip */}
           <div>
-            <div className="mb-3 flex items-center justify-between">
-              <SectionLabel>Yield Bundles</SectionLabel>
-              <span className="text-[10px] text-[#6B7B6B]">One-click multi-protocol allocation</span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {BUNDLES.map((bundle) => (
-                <BundleCard
-                  bundle={bundle}
-                  isRecommended={bundle.risk === riskProfile}
-                  key={bundle.id}
-                  onExecute={() => setExecutingBundle(bundle)}
-                />
-              ))}
+            <SectionLabel>Featured Vaults & Pools</SectionLabel>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+              {featuredPools.map((pool) => {
+                const pairLabel = pool.secondaryAsset ? `${pool.asset} / ${pool.secondaryAsset}` : pool.asset
+                return (
+                  <div
+                    key={`featured-${pool.id}`}
+                    onClick={() => {
+                      setDetailTab('overview')
+                      setSelectedPoolId(pool.id)
+                    }}
+                    className={`group relative cursor-pointer overflow-hidden rounded-2xl border p-5 transition-all duration-200 ${
+                      selectedPoolId === pool.id
+                        ? 'border-[#F2C12E] bg-[#141420] shadow-[0_0_24px_rgba(242,193,46,0.15)]'
+                        : 'border-white/[0.08] bg-[#12121A] hover:border-white/[0.18] hover:bg-[#161622]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex shrink-0">
+                          <TokenAvatar code={pool.asset} />
+                          {pool.secondaryAsset && (
+                            <div className="-ml-2.5">
+                              <TokenAvatar code={pool.secondaryAsset} />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-semibold text-[#F0F0F0]">{pairLabel}</span>
+                      </div>
+                      <span className="rounded-lg bg-white/[0.06] px-2 py-1 text-[10px] font-medium text-[#9CA3AF]">
+                        {pool.tvl} TVL
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex items-end justify-between">
+                      <div>
+                        <p className="text-2xl font-bold text-[#F2C12E]">{pool.apy.toFixed(2)}% <span className="text-xs font-normal text-[#9CA3AF]">APY</span></p>
+                        <p className="mt-0.5 text-xs text-[#9CA3AF]">{pool.protocol}</p>
+                      </div>
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#F0F0F0] transition group-hover:border-[#F2C12E]/50 group-hover:text-[#F2C12E]">
+                        <svg className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
-          {riskProfile && recommended.length > 0 && (
-            <div>
-              <SectionLabel>Recommended · {riskProfile}</SectionLabel>
-              <div className="mt-3 space-y-3">
-                {recommended.map((pool) => (
-                  <PoolCard
-                    expanded={expandedReputation === pool.id}
-                    key={pool.id}
-                    onSelect={() => setSelectedPoolId(selectedPoolId === pool.id ? null : pool.id)}
-                    onToggleReputation={() =>
-                      setExpandedReputation(expandedReputation === pool.id ? null : pool.id)
-                    }
-                    pool={pool}
-                    selected={selectedPoolId === pool.id}
-                  />
+          {/* Kamino-Style Filter & Search Bar */}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
+              <div className="flex items-center gap-2">
+                {[
+                  { key: 'all' as const, label: 'All Vaults' },
+                  { key: 'stables' as const, label: 'Stables' },
+                  { key: 'xlm' as const, label: 'XLM' },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setFilterTab(tab.key)}
+                    type="button"
+                    className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                      filterTab === tab.key
+                        ? 'bg-[#F2C12E] text-[#0D0D12] shadow-[0_0_16px_rgba(242,193,46,0.25)]'
+                        : 'border border-white/[0.08] bg-[#12121A] text-[#9CA3AF] hover:border-white/[0.15] hover:text-[#F0F0F0]'
+                    }`}
+                  >
+                    {tab.key === 'stables' && <span className="font-bold">$</span>}
+                    {tab.key === 'xlm' && <img src={xlmLogo} alt="XLM" className="size-3.5 rounded-full" />}
+                    <span>{tab.label}</span>
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
 
-          <div>
-            <SectionLabel>{riskProfile ? 'All opportunities' : 'Stellar DeFi pools'}</SectionLabel>
-            <div className="mt-3 space-y-3">
-              {others.map((pool) => (
-                <PoolCard
-                  expanded={expandedReputation === pool.id}
-                  key={pool.id}
-                  onSelect={() => setSelectedPoolId(selectedPoolId === pool.id ? null : pool.id)}
-                  onToggleReputation={() =>
-                    setExpandedReputation(expandedReputation === pool.id ? null : pool.id)
-                  }
-                  pool={pool}
-                  selected={selectedPoolId === pool.id}
-                />
-              ))}
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-[#9CA3AF]">
+                  Showing {filteredPools.length} of {stellarPools.length} vaults
+                </span>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search Assets or Managers..."
+                    className="w-60 rounded-xl border border-white/[0.08] bg-[#12121A] px-3.5 py-2 text-xs text-[#F0F0F0] placeholder-[#6B7280] outline-none transition focus:border-[#F2C12E]/50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Kamino-Style Pools Table */}
+            <div className="mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111118]">
+              {/* Table Header */}
+              <div className="grid grid-cols-[minmax(0,2.8fr)_120px_140px_160px_150px_130px] items-center gap-8 border-b border-white/[0.08] px-8 py-5 text-xs font-semibold tracking-wider text-[#6B7280] lg:gap-12">
+                <span>Vault</span>
+                <span>APY</span>
+                <span>Deposits</span>
+                <span>Vault Profile</span>
+                <span>Trust Score</span>
+                <span className="text-right">Action</span>
+              </div>
+
+              {/* Table Rows */}
+              <div className="divide-y divide-white/[0.04]">
+                {filteredPools.map((pool) => {
+                  const score = reputationTotal(pool.reputation)
+                  const label = reputationLabel(score)
+                  const pairLabel = pool.secondaryAsset ? `${pool.asset} / ${pool.secondaryAsset}` : pool.asset
+                  const isSelected = selectedPoolId === pool.id
+                  const isRecommended = riskProfile ? pool.risk === riskProfile : false
+
+                  return (
+                    <div key={pool.id}>
+                      <div
+                        onClick={() => {
+                          setDetailTab('overview')
+                          setSelectedPoolId(pool.id)
+                        }}
+                        className={`grid cursor-pointer grid-cols-[minmax(0,2.8fr)_120px_140px_160px_150px_130px] items-center gap-8 px-8 py-5 transition-colors lg:gap-12 ${
+                          isSelected ? 'bg-[#F2C12E]/[0.06]' : 'hover:bg-white/[0.03]'
+                        }`}
+                      >
+                        {/* Vault column */}
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex shrink-0">
+                            <TokenAvatar code={pool.asset} />
+                            {pool.secondaryAsset && (
+                              <div className="-ml-2.5">
+                                <TokenAvatar code={pool.secondaryAsset} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-semibold text-[#F0F0F0]">{pairLabel}</span>
+                              {isRecommended && (
+                                <span className="shrink-0 rounded-full bg-[#16A34A]/20 px-2 py-0.5 text-[10px] font-bold text-[#16A34A]">
+                                  ★ Recommended
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 truncate text-xs text-[#9CA3AF]">{pool.protocol}</p>
+                          </div>
+                        </div>
+
+                        {/* APY */}
+                        <span className="text-sm font-bold text-[#16A34A]">
+                          {pool.apy.toFixed(2)}%
+                        </span>
+
+                        {/* Deposits */}
+                        <span className="text-sm font-medium text-[#F0F0F0]">{pool.tvl}</span>
+
+                        {/* Vault Profile (Risk badge) */}
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-[#F0F0F0]">
+                            <span
+                              className={`size-1.5 rounded-full ${
+                                pool.risk === 'Conservative'
+                                  ? 'bg-[#16A34A]'
+                                  : pool.risk === 'Moderate'
+                                    ? 'bg-[#F2C12E]'
+                                    : 'bg-[#DC2626]'
+                              }`}
+                            />
+                            {pool.risk === 'Moderate' ? 'Balanced' : pool.risk}
+                          </span>
+                        </div>
+
+                        {/* Trust Score */}
+                        <div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setExpandedReputation(expandedReputation === pool.id ? null : pool.id)
+                            }}
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+                              label === 'Trusted'
+                                ? 'border-[#16A34A]/30 bg-[#16A34A]/10 text-[#16A34A]'
+                                : label === 'Moderate'
+                                  ? 'border-[#F2C12E]/30 bg-[#F2C12E]/10 text-[#F2C12E]'
+                                  : 'border-red-400/30 bg-red-400/10 text-red-400'
+                            }`}
+                          >
+                            {score} · {label}
+                          </button>
+                        </div>
+
+                        {/* Action */}
+                        <div className="flex items-center justify-end">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDetailTab('overview')
+                              setSelectedPoolId(pool.id)
+                            }}
+                            className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                              isSelected
+                                ? 'bg-[#F2C12E] text-[#0D0D12] shadow-[0_0_16px_rgba(242,193,46,0.3)]'
+                                : 'bg-white/[0.08] text-[#F0F0F0] hover:bg-white/[0.15]'
+                            }`}
+                          >
+                            {isSelected ? 'Selected ✓' : 'Deposit'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {expandedReputation === pool.id && (
+                        <div className="border-t border-white/[0.04] bg-[#14141E] px-6 py-4">
+                          <ReputationBreakdown reputation={pool.reputation} score={score} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {filteredPools.length === 0 && (
+                  <div className="py-12 text-center text-sm text-[#9CA3AF]">
+                    No vaults match your filter or search query.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-
-        {selectedPool && (
-          <aside>
-            <StakeTicket
-              available={selectedPool.asset === 'XLM' ? xlmBalance : usdcBalance}
-              onPositionAdded={onPositionAdded}
-              pool={selectedPool}
-            />
-          </aside>
-        )}
-      </div>
-
-      {managingPosition && (
-        <PositionManageModal
-          onClose={() => setManagingPosition(null)}
-          onWithdrawn={onWithdrawn}
-          position={managingPosition}
-        />
-      )}
-
-      {executingBundle && (
-        <BundleExecuteModal
-          bundle={executingBundle}
-          onClose={() => setExecutingBundle(null)}
-          onPositionAdded={onPositionAdded}
-          usdcBalance={usdcBalance}
-        />
-      )}
     </div>
   )
 }
 
 // ─── Position Card ────────────────────────────────────────────────────────────
 
-function PositionCard({
+export function PositionCard({
   onManage,
   position,
 }: {
   onManage: () => void
   position: LocalPosition
 }) {
-  const elapsed = Date.now() - position.openedAt
+  const elapsed = getNowTimestamp() - position.openedAt
   const hours = elapsed / 3_600_000
   const earned = position.amount * (position.apy / 100) * (hours / 8760)
   const isDemo = position.id.startsWith('demo-')
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[#6B7B6B]/15 bg-white/65 transition-all duration-200 hover:border-[#4ade80]/30 hover:shadow-sm">
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#12121A] transition-all duration-200 hover:border-[#16A34A]/40 hover:shadow-sm">
       {/* Left accent strip */}
-      <div className="absolute inset-y-0 left-0 w-[3px] bg-[#4ade80]/50" />
+      <div className="absolute inset-y-0 left-0 w-[3px] bg-[#16A34A]" />
 
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-[#6B7B6B]/10 py-3 pl-7 pr-5">
-        <span className="rounded-md bg-[#1A2E1A] px-2.5 py-0.5 text-xs font-semibold text-[#F5F0E8]">
+      <div className="flex items-center gap-3 border-b border-white/[0.06] py-3 pl-7 pr-5">
+        <span className="rounded-md bg-[#181824] px-2.5 py-0.5 text-xs font-semibold text-[#F0F0F0]">
           {position.protocol}
         </span>
-        <span className="rounded-md border border-[#6B7B6B]/20 px-2.5 py-0.5 text-xs text-[#6B7B6B]">
+        <span className="rounded-md border border-white/[0.08] px-2.5 py-0.5 text-xs text-[#9CA3AF]">
           {position.category}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
           <span className="relative flex size-1.5">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#4ade80] opacity-50" />
-            <span className="relative inline-flex size-1.5 rounded-full bg-[#4ade80]" />
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#16A34A] opacity-50" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-[#16A34A]" />
           </span>
-          <span className="text-xs font-semibold text-[#4ade80]">Active</span>
+          <span className="text-xs font-semibold text-[#16A34A]">Active</span>
         </div>
       </div>
 
@@ -281,44 +560,44 @@ function PositionCard({
         {/* Main figures */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#6B7B6B]">Staked</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums leading-none text-[#1A2E1A]">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-[#9CA3AF]">Staked</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums leading-none text-[#F0F0F0]">
               {position.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              <span className="ml-1.5 text-base font-normal text-[#6B7B6B]">{position.asset}</span>
+              <span className="ml-1.5 text-base font-normal text-[#9CA3AF]">{position.asset}</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#6B7B6B]">Est. earned</p>
-            <p className="mt-1.5 text-2xl font-bold tabular-nums leading-none text-[#4ade80]">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-[#9CA3AF]">Est. earned</p>
+            <p className="mt-1.5 text-2xl font-bold tabular-nums leading-none text-[#16A34A]">
               +{earned < 0.01 ? earned.toFixed(4) : earned.toFixed(2)}
-              <span className="ml-1 text-sm font-normal text-[#4ade80]/60">{position.asset}</span>
+              <span className="ml-1 text-sm font-normal text-[#16A34A]/70">{position.asset}</span>
             </p>
           </div>
         </div>
 
         {/* Stats row */}
-        <div className="mt-5 grid grid-cols-3 gap-3 border-t border-[#6B7B6B]/10 pt-4">
+        <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/[0.06] pt-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">APY</p>
-            <p className="mt-1 text-sm font-semibold text-[#C8A84B]">{position.apy.toFixed(1)}%</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">APY</p>
+            <p className="mt-1 text-sm font-semibold text-[#F2C12E]">{position.apy.toFixed(1)}%</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">Duration</p>
-            <p className="mt-1 text-sm font-semibold text-[#1A2E1A]">{formatElapsed(elapsed)}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">Duration</p>
+            <p className="mt-1 text-sm font-semibold text-[#F0F0F0]">{formatElapsed(elapsed)}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">Opened</p>
-            <p className="mt-1 text-sm font-semibold text-[#1A2E1A]">{position.timestamp}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">Opened</p>
+            <p className="mt-1 text-sm font-semibold text-[#F0F0F0]">{position.timestamp}</p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="mt-4 flex items-center justify-between gap-4">
           {isDemo ? (
-            <span className="text-xs text-[#6B7B6B]/50">Demo position</span>
+            <span className="text-xs text-[#9CA3AF]/60">Demo position</span>
           ) : (
             <a
-              className="font-terminal text-xs text-[#6B7B6B] underline underline-offset-4 transition hover:text-[#1A2E1A]"
+              className="font-terminal text-xs text-[#9CA3AF] underline underline-offset-4 transition hover:text-[#F0F0F0]"
               href={`https://stellar.expert/explorer/testnet/tx/${position.hash}`}
               rel="noreferrer"
               target="_blank"
@@ -327,7 +606,7 @@ function PositionCard({
             </a>
           )}
           <button
-            className="rounded-xl bg-[#1A2E1A] px-5 py-2.5 text-sm font-semibold text-[#F5F0E8] transition-all duration-150 hover:bg-[#0F1F0F]"
+            className="rounded-xl bg-[#F2C12E] px-5 py-2.5 text-sm font-semibold text-[#0D0D12] transition-all duration-150 hover:bg-[#F2C12E]/90"
             onClick={onManage}
             type="button"
           >
@@ -341,7 +620,7 @@ function PositionCard({
 
 // ─── Position Manage Modal ────────────────────────────────────────────────────
 
-function PositionManageModal({
+export function PositionManageModal({
   onClose,
   onWithdrawn,
   position,
@@ -356,7 +635,7 @@ function PositionManageModal({
   const [txHash, setTxHash] = useState<string | null>(null)
   const [txMessage, setTxMessage] = useState<string | null>(null)
 
-  const elapsed = Date.now() - position.openedAt
+  const elapsed = getNowTimestamp() - position.openedAt
   const hours = elapsed / 3_600_000
   const earned = position.amount * (position.apy / 100) * (hours / 8760)
   const isPartial = withdrawAmount < position.amount && withdrawAmount > 0
@@ -407,7 +686,7 @@ function PositionManageModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0F1F0F]/70 backdrop-blur-sm sm:items-center sm:px-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0D0D12]/80 backdrop-blur-sm sm:items-center sm:px-4">
       <button
         aria-label="Close"
         className="absolute inset-0 cursor-default"
@@ -415,15 +694,15 @@ function PositionManageModal({
         type="button"
       />
 
-      <div className="relative w-full max-w-lg overflow-hidden rounded-t-3xl border border-[#6B7B6B]/20 bg-[#F5F0E8] shadow-2xl sm:rounded-3xl">
+      <div className="relative w-full max-w-lg overflow-hidden rounded-t-3xl border border-white/[0.12] bg-[#14141E] shadow-2xl sm:rounded-3xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#6B7B6B]/15 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-[#6B7B6B]">Manage position</p>
-            <h2 className="mt-0.5 text-lg font-semibold text-[#1A2E1A]">{position.protocol}</h2>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#9CA3AF]">Manage position</p>
+            <h2 className="mt-0.5 text-lg font-semibold text-[#F0F0F0]">{position.protocol}</h2>
           </div>
           <button
-            className="flex size-8 items-center justify-center rounded-full border border-[#6B7B6B]/20 text-[#6B7B6B] transition hover:border-[#1A2E1A]/30 hover:text-[#1A2E1A]"
+            className="flex size-8 items-center justify-center rounded-full border border-white/[0.12] text-[#9CA3AF] transition hover:border-white/[0.25] hover:text-[#F0F0F0]"
             onClick={handleConfirmClose}
             type="button"
           >
@@ -446,15 +725,15 @@ function PositionManageModal({
             />
           </div>
 
-          <div className="mt-3 flex items-center justify-between rounded-xl border border-[#6B7B6B]/12 bg-white/50 px-4 py-3 text-sm">
-            <span className="text-[#6B7B6B]">Opened {formatElapsed(elapsed)} ago</span>
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm">
+            <span className="text-[#9CA3AF]">Opened {formatElapsed(elapsed)} ago</span>
             {position.id.startsWith('demo-') ? (
-              <span className="rounded-md bg-[#6B7B6B]/10 px-2 py-0.5 text-xs text-[#6B7B6B]">
+              <span className="rounded-md bg-white/[0.08] px-2 py-0.5 text-xs text-[#9CA3AF]">
                 Demo position
               </span>
             ) : (
               <a
-                className="font-terminal text-xs text-[#6B7B6B] underline underline-offset-4 hover:text-[#1A2E1A]"
+                className="font-terminal text-xs text-[#9CA3AF] underline underline-offset-4 hover:text-[#F0F0F0]"
                 href={`https://stellar.expert/explorer/testnet/tx/${position.hash}`}
                 rel="noreferrer"
                 target="_blank"
@@ -469,16 +748,16 @@ function PositionManageModal({
             <>
               <div className="mt-6">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-[#1A2E1A]" htmlFor="withdraw-amount">
+                  <label className="text-sm font-medium text-[#F0F0F0]" htmlFor="withdraw-amount">
                     Withdraw amount
                   </label>
-                  <span className="text-xs text-[#6B7B6B]">
+                  <span className="text-xs text-[#9CA3AF]">
                     {isPartial ? 'Partial' : 'Full'} withdrawal
                   </span>
                 </div>
                 <div className="relative mt-1.5">
                   <input
-                    className="w-full rounded-xl border border-[#6B7B6B]/20 bg-white/65 px-3 py-3 pr-20 text-[#1A2E1A] outline-none transition focus:border-[#C8A84B]"
+                    className="w-full rounded-xl border border-white/[0.12] bg-[#12121A] px-3 py-3 pr-20 text-[#F0F0F0] outline-none transition focus:border-[#F2C12E]"
                     id="withdraw-amount"
                     max={position.amount}
                     min={0}
@@ -490,9 +769,9 @@ function PositionManageModal({
                     value={withdrawAmount}
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center gap-1.5 pr-3">
-                    <span className="text-sm font-medium text-[#6B7B6B]">{position.asset}</span>
+                    <span className="text-sm font-medium text-[#9CA3AF]">{position.asset}</span>
                     <button
-                      className="rounded-md bg-[#C8A84B]/15 px-1.5 py-0.5 text-xs font-semibold text-[#C8A84B] transition hover:bg-[#C8A84B]/25"
+                      className="rounded-md bg-[#F2C12E]/15 px-1.5 py-0.5 text-xs font-semibold text-[#F2C12E] transition hover:bg-[#F2C12E]/25"
                       onClick={() => setWithdrawAmount(position.amount)}
                       type="button"
                     >
@@ -502,7 +781,7 @@ function PositionManageModal({
                 </div>
                 <input
                   aria-label="Withdraw amount slider"
-                  className="mt-3 w-full accent-[#C8A84B]"
+                  className="mt-3 w-full accent-[#F2C12E]"
                   max={position.amount}
                   min={0}
                   onChange={(e) => setWithdrawAmount(Number(e.target.value))}
@@ -510,7 +789,7 @@ function PositionManageModal({
                   type="range"
                   value={withdrawAmount}
                 />
-                <div className="mt-1 flex justify-between text-xs text-[#6B7B6B]">
+                <div className="mt-1 flex justify-between text-xs text-[#9CA3AF]">
                   <span>0</span>
                   <span>
                     {position.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
@@ -520,8 +799,8 @@ function PositionManageModal({
               </div>
 
               {!isTestnet && status === 'CONNECTED' && (
-                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#C8A84B]/25 bg-[#C8A84B]/8 p-3 text-sm text-[#1A2E1A]">
-                  <span className="mt-0.5 shrink-0 text-[#C8A84B]">⚠</span>
+                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#F2C12E]/25 bg-[#F2C12E]/10 p-3 text-sm text-[#F0F0F0]">
+                  <span className="mt-0.5 shrink-0 text-[#F2C12E]">⚠</span>
                   <p>
                     Switch Freighter to <strong>Testnet</strong> to run demo transactions.
                   </p>
@@ -529,13 +808,13 @@ function PositionManageModal({
               )}
 
               {txMessage && txState === 'error' && (
-                <p className="mt-3 rounded-xl border border-red-300/30 bg-red-50/70 px-4 py-3 text-sm text-red-700">
+                <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                   {txMessage}
                 </p>
               )}
 
               <button
-                className="mt-5 w-full rounded-xl bg-[#1A2E1A] py-3.5 text-sm font-semibold text-[#F5F0E8] transition duration-150 hover:bg-[#0F1F0F] disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-5 w-full rounded-xl bg-[#F2C12E] py-3.5 text-sm font-semibold text-[#0D0D12] transition duration-150 hover:bg-[#F2C12E]/90 disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={withdrawAmount <= 0 || txState === 'signing' || !canSign}
                 onClick={handleWithdraw}
                 type="button"
@@ -550,7 +829,7 @@ function PositionManageModal({
                       ? `Sign partial withdrawal · ${withdrawAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${position.asset}`
                       : `Sign full withdrawal · ${position.amount} ${position.asset}`}
               </button>
-              <p className="mt-2 text-center text-xs text-[#6B7B6B]">
+              <p className="mt-2 text-center text-xs text-[#9CA3AF]">
                 Demo sends 0.001 XLM to self · real Freighter approval
               </p>
             </>
@@ -558,20 +837,20 @@ function PositionManageModal({
 
           {/* Success state */}
           {txState === 'submitted' && txHash && (
-            <div className="mt-4 rounded-2xl border border-[#4ade80]/30 bg-[#4ade80]/10 p-5">
+            <div className="mt-4 rounded-2xl border border-[#16A34A]/30 bg-[#16A34A]/10 p-5">
               <div className="flex items-start gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#4ade80] text-sm font-bold text-[#071C09]">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#16A34A] text-sm font-bold text-[#0D0D12]">
                   ✓
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-[#1A2E1A]">Withdrawal confirmed</p>
-                  <p className="mt-0.5 text-sm text-[#6B7B6B]">
+                  <p className="font-semibold text-[#F0F0F0]">Withdrawal confirmed</p>
+                  <p className="mt-0.5 text-sm text-[#9CA3AF]">
                     {isPartial
                       ? `${withdrawAmount} ${position.asset} withdrawn · remaining position updated`
                       : `Full position closed · ${position.amount} ${position.asset} returned`}
                   </p>
                   <a
-                    className="mt-3 block truncate rounded-lg border border-[#4ade80]/20 bg-white/60 px-3 py-2 font-terminal text-xs text-[#1A2E1A] transition hover:border-[#4ade80]/50"
+                    className="mt-3 block truncate rounded-lg border border-[#16A34A]/20 bg-white/[0.04] px-3 py-2 font-terminal text-xs text-[#F0F0F0] transition hover:border-[#16A34A]/50"
                     href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
                     rel="noreferrer"
                     target="_blank"
@@ -581,7 +860,7 @@ function PositionManageModal({
                 </div>
               </div>
               <button
-                className="mt-4 w-full rounded-xl bg-[#1A2E1A] py-3 text-sm font-semibold text-[#F5F0E8] transition duration-150 hover:bg-[#0F1F0F]"
+                className="mt-4 w-full rounded-xl bg-[#F2C12E] py-3 text-sm font-semibold text-[#0D0D12] transition duration-150 hover:bg-[#F2C12E]/90"
                 onClick={handleConfirmClose}
                 type="button"
               >
@@ -597,7 +876,7 @@ function PositionManageModal({
 
 // ─── Pool Card ────────────────────────────────────────────────────────────────
 
-function PoolCard({
+export function PoolCard({
   expanded,
   onSelect,
   onToggleReputation,
@@ -618,32 +897,32 @@ function PoolCard({
     <div
       className={`overflow-hidden rounded-2xl border transition-all duration-200 ${
         selected
-          ? 'border-[#1A2E1A]/40 bg-white/80 shadow-sm'
-          : 'border-[#6B7B6B]/15 bg-white/45 hover:border-[#6B7B6B]/30'
+          ? 'border-[#F2C12E] bg-[#141420] shadow-sm'
+          : 'border-white/[0.08] bg-[#12121A] hover:border-white/[0.18]'
       }`}
     >
       <div className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md bg-[#1A2E1A] px-2 py-0.5 text-xs font-semibold text-[#F5F0E8]">
+              <span className="rounded-md bg-[#181824] px-2 py-0.5 text-xs font-semibold text-[#F0F0F0]">
                 {pool.protocol}
               </span>
-              <span className="rounded-md border border-[#6B7B6B]/20 px-2 py-0.5 text-xs text-[#6B7B6B]">
+              <span className="rounded-md border border-white/[0.08] px-2 py-0.5 text-xs text-[#9CA3AF]">
                 {pool.category}
               </span>
             </div>
-            <p className="mt-2 text-base font-semibold text-[#1A2E1A]">{pairLabel}</p>
-            <p className="mt-0.5 text-sm text-[#6B7B6B]">{pool.rationale}</p>
+            <p className="mt-2 text-base font-semibold text-[#F0F0F0]">{pairLabel}</p>
+            <p className="mt-0.5 text-sm text-[#9CA3AF]">{pool.rationale}</p>
           </div>
 
           <button
             className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 ${
               label === 'Trusted'
-                ? 'border-[#4ade80]/30 bg-[#4ade80]/10 text-[#1A2E1A] hover:bg-[#4ade80]/20'
+                ? 'border-[#16A34A]/30 bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20'
                 : label === 'Moderate'
-                  ? 'border-[#C8A84B]/30 bg-[#C8A84B]/10 text-[#1A2E1A] hover:bg-[#C8A84B]/20'
-                  : 'border-red-400/25 bg-red-400/8 text-[#1A2E1A] hover:bg-red-400/15'
+                  ? 'border-[#F2C12E]/30 bg-[#F2C12E]/10 text-[#F2C12E] hover:bg-[#F2C12E]/20'
+                  : 'border-red-400/25 bg-red-400/8 text-red-400 hover:bg-red-400/15'
             }`}
             onClick={onToggleReputation}
             title="View trust score breakdown"
@@ -652,9 +931,9 @@ function PoolCard({
             <span
               className={`mr-1.5 inline-block size-1.5 rounded-full align-middle ${
                 label === 'Trusted'
-                  ? 'bg-[#4ade80]'
+                  ? 'bg-[#16A34A]'
                   : label === 'Moderate'
-                    ? 'bg-[#C8A84B]'
+                    ? 'bg-[#F2C12E]'
                     : 'bg-red-400'
               }`}
             />
@@ -674,9 +953,9 @@ function PoolCard({
 
         {pool.utilization !== undefined && (
           <div className="mt-3">
-            <div className="h-1.5 overflow-hidden rounded-full bg-[#6B7B6B]/15">
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
               <div
-                className="h-full rounded-full bg-[#C8A84B] transition-all duration-300"
+                className="h-full rounded-full bg-[#F2C12E] transition-all duration-300"
                 style={{ width: `${pool.utilization}%` }}
               />
             </div>
@@ -689,8 +968,8 @@ function PoolCard({
           <button
             className={`w-full rounded-xl border py-2.5 text-sm font-semibold transition-all duration-150 ${
               selected
-                ? 'border-[#1A2E1A] bg-[#1A2E1A] text-[#F5F0E8]'
-                : 'border-[#6B7B6B]/20 bg-[#F5F0E8]/60 text-[#1A2E1A] hover:border-[#1A2E1A]/30 hover:bg-white/60'
+                ? 'border-[#F2C12E] bg-[#F2C12E] text-[#0D0D12]'
+                : 'border-white/[0.12] bg-white/[0.04] text-[#F0F0F0] hover:border-white/[0.25] hover:bg-white/[0.08]'
             }`}
             onClick={onSelect}
             type="button"
@@ -720,23 +999,23 @@ function ReputationBreakdown({
   ]
 
   return (
-    <div className="mt-4 rounded-xl border border-[#6B7B6B]/15 bg-[#F5F0E8]/60 p-4">
+    <div className="mt-4 rounded-xl border border-white/[0.08] bg-[#161622] p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs uppercase tracking-[0.14em] text-[#6B7B6B]">Trust Score</p>
-        <p className="text-sm font-bold text-[#1A2E1A]">{score}/100</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-[#9CA3AF]">Trust Score</p>
+        <p className="text-sm font-bold text-[#F0F0F0]">{score}/100</p>
       </div>
       <div className="space-y-2.5">
         {rows.map((row) => (
           <div key={row.label}>
             <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="text-[#6B7B6B]">{row.label}</span>
-              <span className="font-medium text-[#1A2E1A]">
+              <span className="text-[#9CA3AF]">{row.label}</span>
+              <span className="font-medium text-[#F0F0F0]">
                 {row.value}/{row.max}
               </span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[#6B7B6B]/15">
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
               <div
-                className="h-full rounded-full bg-[#1A2E1A] transition-all duration-300"
+                className="h-full rounded-full bg-[#16A34A] transition-all duration-300"
                 style={{ width: `${(row.value / row.max) * 100}%` }}
               />
             </div>
@@ -749,7 +1028,7 @@ function ReputationBreakdown({
 
 // ─── Stake Ticket ─────────────────────────────────────────────────────────────
 
-function StakeTicket({
+export function StakeTicket({
   available,
   onPositionAdded,
   pool,
@@ -829,7 +1108,7 @@ function StakeTicket({
         protocol: pool.protocol,
         status: result.status,
         timestamp: new Date().toLocaleTimeString(),
-        openedAt: Date.now(),
+        openedAt: getNowTimestamp(),
         apy: pool.apy,
         category: pool.category,
         poolId: pool.id,
@@ -850,25 +1129,25 @@ function StakeTicket({
   }
 
   return (
-    <div className="sticky top-4 rounded-2xl border border-[#6B7B6B]/20 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
+    <div className="sticky top-4 rounded-2xl border border-white/[0.12] bg-[#14141E] p-6 shadow-xl backdrop-blur-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-[#6B7B6B]">
+          <p className="text-xs uppercase tracking-[0.16em] text-[#9CA3AF]">
             {pool.category === 'Lending' ? 'Supply' : 'Add Liquidity'}
           </p>
-          <h2 className="mt-1 text-xl font-semibold text-[#1A2E1A]">{pool.protocol}</h2>
+          <h2 className="mt-1 text-xl font-semibold text-[#F0F0F0]">{pool.protocol}</h2>
         </div>
-        <span className="rounded-lg border border-[#6B7B6B]/15 bg-[#F5F0E8]/60 px-2.5 py-1 text-xs font-medium text-[#6B7B6B]">
+        <span className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-[#9CA3AF]">
           Testnet demo
         </span>
       </div>
 
-      <div className="mt-4 rounded-xl bg-[#1A2E1A] p-4 text-[#F5F0E8]">
-        <p className="text-xs text-[#F5F0E8]/50">Available {pool.asset}</p>
+      <div className="mt-4 rounded-xl bg-[#12121A] border border-white/[0.08] p-4 text-[#F0F0F0]">
+        <p className="text-xs text-[#9CA3AF]">Available {pool.asset}</p>
         <p className="mt-1 text-3xl font-semibold tabular-nums">
           {available.toLocaleString(undefined, { maximumFractionDigits: 4 })}
         </p>
-        <p className="mt-1 text-xs text-[#F5F0E8]/40">{pool.asset} · Freighter balance</p>
+        <p className="mt-1 text-xs text-[#9CA3AF]/70">{pool.asset} · Freighter balance</p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
@@ -876,12 +1155,12 @@ function StakeTicket({
         <TicketStat label="Method" value={pool.method} mono />
       </div>
 
-      <label className="mt-5 block text-sm font-medium text-[#1A2E1A]" htmlFor="stake-amount">
+      <label className="mt-5 block text-sm font-medium text-[#F0F0F0]" htmlFor="stake-amount">
         Amount to supply
       </label>
       <div className="relative mt-1.5">
         <input
-          className="w-full rounded-xl border border-[#6B7B6B]/20 bg-[#F5F0E8]/65 px-3 py-3 pr-20 text-[#1A2E1A] outline-none transition focus:border-[#C8A84B]"
+          className="w-full rounded-xl border border-white/[0.12] bg-[#12121A] px-3 py-3 pr-20 text-[#F0F0F0] outline-none transition focus:border-[#F2C12E]"
           id="stake-amount"
           max={available}
           min={0}
@@ -890,9 +1169,9 @@ function StakeTicket({
           value={amount}
         />
         <div className="absolute inset-y-0 right-0 flex items-center gap-1.5 pr-3">
-          <span className="text-sm font-medium text-[#6B7B6B]">{pool.asset}</span>
+          <span className="text-sm font-medium text-[#9CA3AF]">{pool.asset}</span>
           <button
-            className="rounded-md bg-[#C8A84B]/15 px-1.5 py-0.5 text-xs font-semibold text-[#C8A84B] transition hover:bg-[#C8A84B]/25"
+            className="rounded-md bg-[#F2C12E]/15 px-1.5 py-0.5 text-xs font-semibold text-[#F2C12E] transition hover:bg-[#F2C12E]/25"
             onClick={() => setAmount(available)}
             type="button"
           >
@@ -902,7 +1181,7 @@ function StakeTicket({
       </div>
       <input
         aria-label="Stake amount slider"
-        className="mt-3 w-full accent-[#C8A84B]"
+        className="mt-3 w-full accent-[#F2C12E]"
         max={available}
         min={0}
         onChange={(e) => setAmount(Number(e.target.value))}
@@ -912,17 +1191,17 @@ function StakeTicket({
       />
 
       {isLP && secondaryAsset && amount > 0 && (
-        <div className="mt-3 flex items-center justify-between rounded-xl border border-[#6B7B6B]/15 bg-[#F5F0E8]/60 px-4 py-3">
+        <div className="mt-3 flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">Paired amount</p>
-            <p className="mt-0.5 text-sm font-semibold text-[#1A2E1A]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">Paired amount</p>
+            <p className="mt-0.5 text-sm font-semibold text-[#F0F0F0]">
               {secondaryAmount.toFixed(4)}{' '}
-              <span className="font-normal text-[#6B7B6B]">{secondaryAsset}</span>
+              <span className="font-normal text-[#9CA3AF]">{secondaryAsset}</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">Est. ratio</p>
-            <p className="mt-0.5 font-terminal text-xs text-[#6B7B6B]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">Est. ratio</p>
+            <p className="mt-0.5 font-terminal text-xs text-[#9CA3AF]">
               1 {pool.asset} ≈ {(secondaryAmount / amount).toFixed(4)} {secondaryAsset}
             </p>
           </div>
@@ -930,8 +1209,8 @@ function StakeTicket({
       )}
 
       {!isTestnet && isConnected && (
-        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#C8A84B]/25 bg-[#C8A84B]/8 p-3 text-sm text-[#1A2E1A]">
-          <span className="mt-0.5 shrink-0 text-[#C8A84B]">⚠</span>
+        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#F2C12E]/25 bg-[#F2C12E]/10 p-3 text-sm text-[#F0F0F0]">
+          <span className="mt-0.5 shrink-0 text-[#F2C12E]">⚠</span>
           <p>
             Switch Freighter to <strong>Testnet</strong> to run demo transactions.
           </p>
@@ -939,7 +1218,7 @@ function StakeTicket({
       )}
 
       <button
-        className="mt-5 w-full rounded-xl bg-[#1A2E1A] py-3.5 text-sm font-semibold text-[#F5F0E8] transition duration-150 hover:bg-[#0F1F0F] disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-5 w-full rounded-xl bg-[#F2C12E] py-3.5 text-sm font-semibold text-[#0D0D12] transition duration-150 hover:bg-[#F2C12E]/90 disabled:cursor-not-allowed disabled:opacity-40"
         disabled={amount <= 0 || available <= 0 || txState === 'signing' || !canSign}
         onClick={handleExecute}
         type="button"
@@ -947,27 +1226,27 @@ function StakeTicket({
         {buttonLabel()}
       </button>
 
-      <p className="mt-2.5 text-center text-xs text-[#6B7B6B]">
+      <p className="mt-2.5 text-center text-xs text-[#9CA3AF]">
         Demo sends 0.001 XLM to self · real Freighter approval
       </p>
 
       {txMessage && txState === 'error' && (
-        <p className="mt-3 rounded-xl border border-red-300/30 bg-red-50/70 px-4 py-3 text-sm text-red-700">
+        <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {txMessage}
         </p>
       )}
 
       {txState === 'submitted' && txHash && (
-        <div className="mt-4 rounded-xl border border-[#4ade80]/30 bg-[#4ade80]/10 p-4">
+        <div className="mt-4 rounded-xl border border-[#16A34A]/30 bg-[#16A34A]/10 p-4">
           <div className="flex items-start gap-3">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#4ade80] text-xs font-bold text-[#071C09]">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-[#0D0D12]">
               ✓
             </span>
             <div className="min-w-0">
-              <p className="font-semibold text-[#1A2E1A]">Supply confirmed</p>
-              <p className="mt-0.5 text-xs text-[#6B7B6B]">Position added to your open positions</p>
+              <p className="font-semibold text-[#F0F0F0]">Supply confirmed</p>
+              <p className="mt-0.5 text-xs text-[#9CA3AF]">Position added to your open positions</p>
               <a
-                className="mt-2 block truncate rounded-lg border border-[#4ade80]/20 bg-white/50 px-3 py-2 font-terminal text-xs text-[#1A2E1A] transition hover:border-[#4ade80]/50"
+                className="mt-2 block truncate rounded-lg border border-[#16A34A]/20 bg-white/[0.04] px-3 py-2 font-terminal text-xs text-[#F0F0F0] transition hover:border-[#16A34A]/50"
                 href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
                 rel="noreferrer"
                 target="_blank"
@@ -995,11 +1274,11 @@ function formatElapsed(ms: number) {
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6B7B6B]">{children}</p>
+    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9CA3AF]">{children}</p>
   )
 }
 
-function PortfolioWidget({
+export function PortfolioWidget({
   onRetakeQuiz,
   riskProfile,
   usdcBalance,
@@ -1013,39 +1292,39 @@ function PortfolioWidget({
   const totalEst = xlmBalance * 0.12 + usdcBalance
   const riskDot =
     riskProfile === 'Conservative'
-      ? 'bg-[#4ade80]'
+      ? 'bg-[#16A34A]'
       : riskProfile === 'Moderate'
-        ? 'bg-[#C8A84B]'
-        : 'bg-orange-400'
+        ? 'bg-[#F2C12E]'
+        : 'bg-[#F97316]'
 
   return (
-    <div className="rounded-2xl border border-[#6B7B6B]/15 bg-white/65 px-5 py-4">
+    <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] px-5 py-4">
       <div className="flex flex-wrap items-center gap-6">
-        <div className="border-r border-[#6B7B6B]/15 pr-6">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-[#6B7B6B]">Portfolio</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-[#1A2E1A]">${totalEst.toFixed(2)}</p>
-          <p className="mt-0.5 text-[10px] text-[#6B7B6B]/60">~estimate · Testnet</p>
+        <div className="border-r border-white/[0.08] pr-6">
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[#9CA3AF]">Portfolio</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-[#F0F0F0]">${totalEst.toFixed(2)}</p>
+          <p className="mt-0.5 text-[10px] text-[#9CA3AF]/60">~estimate · Testnet</p>
         </div>
 
         <div className="flex items-center gap-5">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">XLM</p>
-            <p className="mt-1 text-sm font-semibold tabular-nums text-[#1A2E1A]">{xlmBalance.toFixed(2)}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">XLM</p>
+            <p className="mt-1 text-sm font-semibold tabular-nums text-[#F0F0F0]">{xlmBalance.toFixed(2)}</p>
           </div>
-          <div className="h-6 w-px bg-[#6B7B6B]/15" />
+          <div className="h-6 w-px bg-white/[0.08]" />
           <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">USDC</p>
-            <p className="mt-1 text-sm font-semibold tabular-nums text-[#1A2E1A]">{usdcBalance.toFixed(2)}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">USDC</p>
+            <p className="mt-1 text-sm font-semibold tabular-nums text-[#F0F0F0]">{usdcBalance.toFixed(2)}</p>
           </div>
         </div>
 
         {riskProfile && (
-          <div className="flex items-center gap-2 rounded-xl border border-[#6B7B6B]/15 bg-[#F5F0E8]/70 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2">
             <span className={`size-2 rounded-full ${riskDot}`} />
-            <span className="text-sm font-medium text-[#1A2E1A]">{riskProfile}</span>
-            <span className="text-[#6B7B6B]/40">·</span>
+            <span className="text-sm font-medium text-[#F0F0F0]">{riskProfile}</span>
+            <span className="text-white/[0.2]">·</span>
             <button
-              className="text-xs text-[#6B7B6B] underline underline-offset-4 transition hover:text-[#1A2E1A]"
+              className="text-xs text-[#9CA3AF] underline underline-offset-4 transition hover:text-[#F0F0F0]"
               onClick={onRetakeQuiz}
               type="button"
             >
@@ -1069,9 +1348,9 @@ function Metric({
 }) {
   return (
     <div>
-      <p className="text-xs text-[#6B7B6B]">{label}</p>
+      <p className="text-xs text-[#9CA3AF]">{label}</p>
       <p
-        className={`mt-0.5 text-base font-semibold ${highlight ? 'text-[#4ade80]' : 'text-[#1A2E1A]'}`}
+        className={`mt-0.5 text-base font-semibold ${highlight ? 'text-[#16A34A]' : 'text-[#F0F0F0]'}`}
       >
         {value}
       </p>
@@ -1092,11 +1371,11 @@ function StatBox({
   value: string
 }) {
   return (
-    <div className="rounded-xl border border-[#6B7B6B]/15 bg-white/60 p-3">
-      <p className="text-xs text-[#6B7B6B]">{label}</p>
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-3">
+      <p className="text-xs text-[#9CA3AF]">{label}</p>
       <p
         className={`mt-1 text-sm font-semibold ${
-          positive ? 'text-[#4ade80]' : highlight ? 'text-[#C8A84B]' : 'text-[#1A2E1A]'
+          positive ? 'text-[#16A34A]' : highlight ? 'text-[#F2C12E]' : 'text-[#F0F0F0]'
         }`}
       >
         {value}
@@ -1107,18 +1386,39 @@ function StatBox({
 
 function TicketStat({ label, mono, value }: { label: string; mono?: boolean; value: string }) {
   return (
-    <div className="rounded-xl border border-[#6B7B6B]/15 bg-[#F5F0E8]/60 p-3">
-      <p className="text-xs text-[#6B7B6B]">{label}</p>
-      <p className={`mt-0.5 text-sm font-semibold text-[#1A2E1A] ${mono ? 'font-terminal' : ''}`}>
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-3">
+      <p className="text-xs text-[#9CA3AF]">{label}</p>
+      <p className={`mt-0.5 text-sm font-semibold text-[#F0F0F0] ${mono ? 'font-terminal' : ''}`}>
         {value}
       </p>
     </div>
   )
 }
 
+type BundleAlloc = {
+  poolId: string
+  label: string
+  pct: number
+  category: 'Lending' | 'AMM LP' | 'AMM Rewards'
+  asset: 'XLM' | 'USDC'
+}
+
+type YieldBundle = {
+  id: string
+  name: string
+  tagline: string
+  risk: RiskProfile
+  estApy: number
+  dotColor: string
+  borderActive: string
+  bgActive: string
+  textColor: string
+  allocations: BundleAlloc[]
+}
+
 // ─── Bundle Card ──────────────────────────────────────────────────────────────
 
-function BundleCard({
+export function BundleCard({
   bundle,
   isRecommended,
   onExecute,
@@ -1127,14 +1427,14 @@ function BundleCard({
   isRecommended: boolean
   onExecute: () => void
 }) {
-  const barColors = ['bg-[#1A2E1A]', 'bg-[#C8A84B]', 'bg-[#4ade80]']
+  const barColors = ['bg-[#F2C12E]', 'bg-[#1E3A8A]', 'bg-[#16A34A]']
 
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border transition-all duration-200 ${
         isRecommended
           ? `${bundle.borderActive} ${bundle.bgActive} shadow-sm`
-          : 'border-[#6B7B6B]/15 bg-white/50 hover:border-[#6B7B6B]/30'
+          : 'border-white/[0.08] bg-[#12121A] hover:border-white/[0.18]'
       }`}
     >
       {isRecommended && (
@@ -1148,15 +1448,15 @@ function BundleCard({
           <div>
             <div className="flex items-center gap-2">
               <span className={`size-2 rounded-full ${bundle.dotColor}`} />
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6B7B6B]">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#9CA3AF]">
                 {bundle.risk}
               </p>
             </div>
-            <h3 className="mt-1.5 text-lg font-bold text-[#1A2E1A]">{bundle.name}</h3>
-            <p className="text-sm text-[#6B7B6B]">{bundle.tagline}</p>
+            <h3 className="mt-1.5 text-lg font-bold text-[#F0F0F0]">{bundle.name}</h3>
+            <p className="text-sm text-[#9CA3AF]">{bundle.tagline}</p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B7B6B]">Est. APY</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">Est. APY</p>
             <p className={`mt-0.5 text-xl font-bold ${bundle.textColor}`}>
               {bundle.estApy.toFixed(1)}%
             </p>
@@ -1167,10 +1467,10 @@ function BundleCard({
           {bundle.allocations.map((alloc, i) => (
             <div key={alloc.poolId}>
               <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-[#6B7B6B]">{alloc.label}</span>
-                <span className="font-semibold text-[#1A2E1A]">{alloc.pct}%</span>
+                <span className="text-[#9CA3AF]">{alloc.label}</span>
+                <span className="font-semibold text-[#F0F0F0]">{alloc.pct}%</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-[#6B7B6B]/12">
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${barColors[i % barColors.length]}`}
                   style={{ width: `${alloc.pct}%` }}
@@ -1183,8 +1483,8 @@ function BundleCard({
         <button
           className={`mt-5 w-full rounded-xl py-2.5 text-sm font-semibold transition-all duration-150 ${
             isRecommended
-              ? 'bg-[#1A2E1A] text-[#F5F0E8] hover:bg-[#0F1F0F]'
-              : 'border border-[#6B7B6B]/20 bg-white/60 text-[#1A2E1A] hover:border-[#1A2E1A]/30 hover:bg-white/80'
+              ? 'bg-[#F2C12E] text-[#0D0D12] hover:bg-[#F2C12E]/90'
+              : 'border border-white/[0.12] bg-white/[0.04] text-[#F0F0F0] hover:border-white/[0.2] hover:bg-white/[0.08]'
           }`}
           onClick={onExecute}
           type="button"
@@ -1207,7 +1507,7 @@ type ExecStep = {
   error?: string
 }
 
-function BundleExecuteModal({
+export function BundleExecuteModal({
   bundle,
   onClose,
   onPositionAdded,
@@ -1310,23 +1610,23 @@ function BundleExecuteModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0F1F0F]/70 backdrop-blur-sm sm:items-center sm:px-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0D0D12]/80 backdrop-blur-sm sm:items-center sm:px-4">
       <button className="absolute inset-0 cursor-default" onClick={onClose} type="button" />
 
-      <div className="relative w-full max-w-lg overflow-hidden rounded-t-3xl border border-[#6B7B6B]/20 bg-[#F5F0E8] shadow-2xl sm:rounded-3xl">
+      <div className="relative w-full max-w-lg overflow-hidden rounded-t-3xl border border-white/[0.12] bg-[#14141E] shadow-2xl sm:rounded-3xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#6B7B6B]/15 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-4">
           <div>
             <div className="flex items-center gap-2">
               <span className={`size-2 rounded-full ${bundle.dotColor}`} />
-              <p className="text-xs uppercase tracking-[0.16em] text-[#6B7B6B]">{bundle.risk}</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-[#9CA3AF]">{bundle.risk}</p>
             </div>
-            <h2 className="mt-0.5 text-lg font-semibold text-[#1A2E1A]">{bundle.name} Bundle</h2>
+            <h2 className="mt-0.5 text-lg font-semibold text-[#F0F0F0]">{bundle.name} Bundle</h2>
           </div>
           <div className="flex items-center gap-3">
             <span className={`text-xl font-bold ${bundle.textColor}`}>{bundle.estApy.toFixed(1)}% est.</span>
             <button
-              className="flex size-8 items-center justify-center rounded-full border border-[#6B7B6B]/20 text-[#6B7B6B] transition hover:border-[#1A2E1A]/30 hover:text-[#1A2E1A]"
+              className="flex size-8 items-center justify-center rounded-full border border-white/[0.12] text-[#9CA3AF] transition hover:border-white/[0.25] hover:text-[#F0F0F0]"
               onClick={onClose}
               type="button"
             >
@@ -1338,12 +1638,12 @@ function BundleExecuteModal({
         <div className="p-6">
           {!executing && !done && (
             <>
-              <label className="block text-sm font-medium text-[#1A2E1A]" htmlFor="bundle-amount">
+              <label className="block text-sm font-medium text-[#F0F0F0]" htmlFor="bundle-amount">
                 Total amount to invest
               </label>
               <div className="relative mt-1.5">
                 <input
-                  className="w-full rounded-xl border border-[#6B7B6B]/20 bg-white/65 px-3 py-3 pr-24 text-[#1A2E1A] outline-none transition focus:border-[#C8A84B]"
+                  className="w-full rounded-xl border border-white/[0.12] bg-[#12121A] px-3 py-3 pr-24 text-[#F0F0F0] outline-none transition focus:border-[#F2C12E]"
                   id="bundle-amount"
                   max={maxAmount}
                   min={0}
@@ -1352,9 +1652,9 @@ function BundleExecuteModal({
                   value={amount}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center gap-1.5 pr-3">
-                  <span className="text-sm font-medium text-[#6B7B6B]">USDC</span>
+                  <span className="text-sm font-medium text-[#9CA3AF]">USDC</span>
                   <button
-                    className="rounded-md bg-[#C8A84B]/15 px-1.5 py-0.5 text-xs font-semibold text-[#C8A84B] hover:bg-[#C8A84B]/25"
+                    className="rounded-md bg-[#F2C12E]/15 px-1.5 py-0.5 text-xs font-semibold text-[#F2C12E] hover:bg-[#F2C12E]/25"
                     onClick={() => setAmount(maxAmount)}
                     type="button"
                   >
@@ -1364,19 +1664,19 @@ function BundleExecuteModal({
               </div>
 
               {amount > 0 && (
-                <div className="mt-4 space-y-2 rounded-xl border border-[#6B7B6B]/15 bg-white/50 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6B7B6B]">
+                <div className="mt-4 space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.04] p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9CA3AF]">
                     Allocation preview
                   </p>
                   {preview.map((alloc, i) => {
-                    const barColors = ['bg-[#1A2E1A]', 'bg-[#C8A84B]', 'bg-[#4ade80]']
+                    const barColors = ['bg-[#F2C12E]', 'bg-[#1E3A8A]', 'bg-[#16A34A]']
                     return (
                       <div className="flex items-center justify-between gap-4" key={alloc.poolId}>
                         <div className="flex items-center gap-2">
                           <span className={`size-2 rounded-full ${barColors[i % barColors.length]}`} />
-                          <span className="text-sm text-[#6B7B6B]">{alloc.label}</span>
+                          <span className="text-sm text-[#9CA3AF]">{alloc.label}</span>
                         </div>
-                        <span className="text-sm font-semibold text-[#1A2E1A]">
+                        <span className="text-sm font-semibold text-[#F0F0F0]">
                           {alloc.amount.toFixed(2)} {alloc.asset}
                         </span>
                       </div>
@@ -1386,21 +1686,21 @@ function BundleExecuteModal({
               )}
 
               {!isTestnet && isConnected && (
-                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#C8A84B]/25 bg-[#C8A84B]/8 p-3 text-sm text-[#1A2E1A]">
-                  <span className="shrink-0 text-[#C8A84B]">⚠</span>
+                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#F2C12E]/25 bg-[#F2C12E]/10 p-3 text-sm text-[#F0F0F0]">
+                  <span className="shrink-0 text-[#F2C12E]">⚠</span>
                   <p>Switch Freighter to <strong>Testnet</strong> to execute bundles.</p>
                 </div>
               )}
 
               <button
-                className="mt-5 w-full rounded-xl bg-[#1A2E1A] py-3.5 text-sm font-semibold text-[#F5F0E8] transition hover:bg-[#0F1F0F] disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-5 w-full rounded-xl bg-[#F2C12E] py-3.5 text-sm font-semibold text-[#0D0D12] transition hover:bg-[#F2C12E]/90 disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={!canExecute}
                 onClick={handleExecute}
                 type="button"
               >
                 {!isConnected ? 'Connect wallet' : !isTestnet ? 'Switch to Testnet' : `Execute ${bundle.allocations.length} transactions →`}
               </button>
-              <p className="mt-2 text-center text-xs text-[#6B7B6B]">
+              <p className="mt-2 text-center text-xs text-[#9CA3AF]">
                 Each allocation is a separate Freighter signature
               </p>
             </>
@@ -1408,7 +1708,7 @@ function BundleExecuteModal({
 
           {(executing || done) && steps.length > 0 && (
             <div>
-              <p className="mb-4 text-sm font-medium text-[#1A2E1A]">
+              <p className="mb-4 text-sm font-medium text-[#F0F0F0]">
                 {done ? 'Execution complete' : 'Executing bundle…'}
               </p>
               <div className="space-y-3">
@@ -1416,33 +1716,33 @@ function BundleExecuteModal({
                   <div
                     className={`flex items-start gap-3 rounded-xl border p-4 transition-all duration-300 ${
                       step.status === 'done'
-                        ? 'border-[#4ade80]/25 bg-[#4ade80]/8'
+                        ? 'border-[#16A34A]/30 bg-[#16A34A]/10'
                         : step.status === 'running'
-                          ? 'border-[#C8A84B]/25 bg-[#C8A84B]/8'
+                          ? 'border-[#F2C12E]/30 bg-[#F2C12E]/10'
                           : step.status === 'error'
-                            ? 'border-red-300/30 bg-red-50/60'
-                            : 'border-[#6B7B6B]/15 bg-white/40'
+                            ? 'border-red-500/30 bg-red-500/10'
+                            : 'border-white/[0.08] bg-white/[0.04]'
                     }`}
                     key={i}
                   >
                     <span
                       className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                         step.status === 'done'
-                          ? 'bg-[#4ade80] text-[#071C09]'
+                          ? 'bg-[#16A34A] text-[#0D0D12]'
                           : step.status === 'running'
-                            ? 'bg-[#C8A84B] text-[#1A2E1A]'
+                            ? 'bg-[#F2C12E] text-[#0D0D12]'
                             : step.status === 'error'
-                              ? 'bg-red-400 text-white'
-                              : 'border border-[#6B7B6B]/20 bg-transparent text-[#6B7B6B]'
+                              ? 'bg-red-500 text-white'
+                              : 'border border-white/[0.2] bg-transparent text-[#9CA3AF]'
                       }`}
                     >
                       {step.status === 'done' ? '✓' : step.status === 'running' ? '…' : step.status === 'error' ? '✗' : String(i + 1)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-[#1A2E1A]">{step.label}</p>
+                      <p className="text-sm font-medium text-[#F0F0F0]">{step.label}</p>
                       {step.hash && (
                         <a
-                          className="mt-1 block truncate font-terminal text-xs text-[#6B7B6B] underline underline-offset-4 hover:text-[#1A2E1A]"
+                          className="mt-1 block truncate font-terminal text-xs text-[#9CA3AF] underline underline-offset-4 hover:text-[#F0F0F0]"
                           href={`https://stellar.expert/explorer/testnet/tx/${step.hash}`}
                           rel="noreferrer"
                           target="_blank"
@@ -1451,7 +1751,7 @@ function BundleExecuteModal({
                         </a>
                       )}
                       {step.error && (
-                        <p className="mt-1 text-xs text-red-600">{step.error}</p>
+                        <p className="mt-1 text-xs text-red-400">{step.error}</p>
                       )}
                     </div>
                   </div>
@@ -1460,7 +1760,7 @@ function BundleExecuteModal({
 
               {done && (
                 <button
-                  className="mt-5 w-full rounded-xl bg-[#1A2E1A] py-3 text-sm font-semibold text-[#F5F0E8] transition hover:bg-[#0F1F0F]"
+                  className="mt-5 w-full rounded-xl bg-[#F2C12E] py-3 text-sm font-semibold text-[#0D0D12] transition hover:bg-[#F2C12E]/90"
                   onClick={onClose}
                   type="button"
                 >
@@ -1477,7 +1777,7 @@ function BundleExecuteModal({
 
 // ─── Portfolio Allocation ─────────────────────────────────────────────────────
 
-function PortfolioAllocation({
+export function PortfolioAllocation({
   positions,
   riskProfile,
 }: {
@@ -1490,11 +1790,11 @@ function PortfolioAllocation({
   )
 
   const categories: { id: string; label: string; color: string; bg: string; target?: number }[] = [
-    { id: 'Lending', label: 'Lending', color: 'bg-[#1A2E1A]', bg: 'bg-[#1A2E1A]/10',
+    { id: 'Lending', label: 'Lending', color: 'bg-[#F2C12E]', bg: 'bg-[#F2C12E]/10',
       target: riskProfile === 'Conservative' ? 100 : riskProfile === 'Moderate' ? 50 : 25 },
-    { id: 'AMM LP', label: 'AMM LP', color: 'bg-[#C8A84B]', bg: 'bg-[#C8A84B]/10',
+    { id: 'AMM LP', label: 'AMM LP', color: 'bg-[#1E3A8A]', bg: 'bg-[#1E3A8A]/10',
       target: riskProfile === 'Conservative' ? 0 : riskProfile === 'Moderate' ? 50 : 40 },
-    { id: 'AMM Rewards', label: 'Rewards', color: 'bg-[#4ade80]', bg: 'bg-[#4ade80]/10',
+    { id: 'AMM Rewards', label: 'Rewards', color: 'bg-[#16A34A]', bg: 'bg-[#16A34A]/10',
       target: riskProfile === 'Conservative' ? 0 : riskProfile === 'Moderate' ? 0 : 35 },
   ]
 
@@ -1507,10 +1807,10 @@ function PortfolioAllocation({
   }).filter((c) => c.value > 0 || (c.target ?? 0) > 0)
 
   return (
-    <div className="rounded-2xl border border-[#6B7B6B]/15 bg-white/50 p-5">
+    <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-5">
       <div className="mb-4 flex items-center justify-between">
         <SectionLabel>Portfolio Allocation</SectionLabel>
-        <span className="font-terminal text-xs text-[#6B7B6B]">
+        <span className="font-terminal text-xs text-[#9CA3AF]">
           ~${totalValue.toFixed(0)} total
         </span>
       </div>
@@ -1521,19 +1821,19 @@ function PortfolioAllocation({
             <div className="mb-1.5 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span className={`size-2 rounded-full ${cat.color}`} />
-                <span className="font-medium text-[#1A2E1A]">{cat.label}</span>
+                <span className="font-medium text-[#F0F0F0]">{cat.label}</span>
               </div>
               <div className="flex items-center gap-3">
                 {cat.target !== undefined && (
-                  <span className="text-[#6B7B6B]">target {cat.target}%</span>
+                  <span className="text-[#9CA3AF]">target {cat.target}%</span>
                 )}
-                <span className="font-semibold text-[#1A2E1A]">{cat.pct.toFixed(0)}%</span>
+                <span className="font-semibold text-[#F0F0F0]">{cat.pct.toFixed(0)}%</span>
               </div>
             </div>
-            <div className="relative h-2 overflow-hidden rounded-full bg-[#6B7B6B]/12">
+            <div className="relative h-2 overflow-hidden rounded-full bg-white/[0.08]">
               {cat.target !== undefined && cat.target > 0 && (
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full border-r-2 border-[#6B7B6B]/30 bg-transparent"
+                  className="absolute inset-y-0 left-0 rounded-full border-r-2 border-white/[0.3] bg-transparent"
                   style={{ width: `${cat.target}%` }}
                 />
               )}
@@ -1547,7 +1847,7 @@ function PortfolioAllocation({
       </div>
 
       {riskProfile && (
-        <p className="mt-3 text-[10px] text-[#6B7B6B]">
+        <p className="mt-3 text-[10px] text-[#9CA3AF]">
           Dashed lines show target allocation for <strong>{riskProfile}</strong> profile
         </p>
       )}

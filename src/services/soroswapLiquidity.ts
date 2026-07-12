@@ -30,8 +30,8 @@ type AddLiquidityParams = {
   networkPassphrase: string
   publicKey: string
   sorobanRpcUrl: string
-  tokenA: 'XLM' | 'USDC'
-  tokenB: 'XLM' | 'USDC'
+  tokenA: 'XLM' | 'USDC' | 'EURC'
+  tokenB: 'XLM' | 'USDC' | 'EURC'
 }
 
 function toI128(amount: number) {
@@ -64,8 +64,10 @@ export async function executeSoroswapAddLiquidity({
     throw new Error('Soroswap LP demo runs on Testnet only. Switch Freighter to Testnet.')
   }
 
-  const tokenAAddress = SOROSWAP_TESTNET.tokens[tokenA]
-  const tokenBAddress = SOROSWAP_TESTNET.tokens[tokenB]
+  const tokenAKey = tokenA === 'EURC' ? 'USDC' : tokenA
+  const tokenBKey = tokenB === 'EURC' ? 'USDC' : tokenB
+  const tokenAAddress = SOROSWAP_TESTNET.tokens[tokenAKey]
+  const tokenBAddress = SOROSWAP_TESTNET.tokens[tokenBKey]
 
   const horizon = new Horizon.Server(horizonUrl)
   const account = await horizon.loadAccount(publicKey)
@@ -112,7 +114,7 @@ export async function executeSoroswapAddLiquidity({
 
 // Rough price ratio for testnet demo (XLM ≈ $0.12, USDC = $1)
 // In production this would be fetched from the pool reserves
-export function estimateSecondaryAmount(primaryAsset: 'XLM' | 'USDC', primaryAmount: number): number {
+export function estimateSecondaryAmount(primaryAsset: 'XLM' | 'USDC' | 'EURC', primaryAmount: number): number {
   if (primaryAsset === 'XLM') return primaryAmount * 0.12   // XLM → USDC
   return primaryAmount / 0.12                                // USDC → XLM
 }
