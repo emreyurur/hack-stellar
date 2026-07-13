@@ -347,7 +347,14 @@ export class ScoutService {
       };
       
     } catch (error) {
-      const errorMsg = error.response ? JSON.stringify(error.response.data.extras.result_codes) : error.message;
+      let errorMsg = error.message;
+      if (error.response?.data) {
+        if (error.response.data.extras?.result_codes) {
+          errorMsg = JSON.stringify(error.response.data.extras.result_codes);
+        } else {
+          errorMsg = JSON.stringify(error.response.data);
+        }
+      }
       this.logger.error(`Error in automateTokenAndLP: ${errorMsg}`);
       throw new Error(`Transaction failed: ${errorMsg}`);
     }
