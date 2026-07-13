@@ -25,7 +25,10 @@ export class OrchestratorService {
     publicKey: string,
     dto: BuildTransactionDto,
   ): Promise<BuiltTransactionDto> {
-    const pool = await this.scoutService.getPool(dto.poolId);
+    let pool = await this.scoutService.getPool(dto.poolId);
+    if (!pool) {
+      pool = await this.scoutService.forceFetchPool(dto.poolId);
+    }
     if (!pool) {
       throw new BadRequestException("Pool not found");
     }

@@ -9,6 +9,7 @@ import {
 import { appConfig } from "../../../config/app.config";
 import { LiquidityPool } from "../../scout/entities/liquidity-pool.entity";
 import { HorizonClient } from "../../scout/horizon/horizon.client";
+import { LiquidityPoolAsset } from "@stellar/stellar-sdk";
 
 @Injectable()
 export class XdrBuilderService {
@@ -48,8 +49,26 @@ export class XdrBuilderService {
         fee: "100",
         networkPassphrase: this.config.networkPassphrase,
       },
-    )
-      .addOperation(
+    );
+
+    // Check if user has trustline for this LP pool
+    const hasLpTrustline = accountRes.balances.some(
+      (b: any) => b.liquidity_pool_id === pool.id
+    );
+
+    if (!hasLpTrustline) {
+      const assetA = this.getStellarAsset(pool.assetACode, pool.assetAIssuer);
+      const assetB = this.getStellarAsset(pool.assetBCode, pool.assetBIssuer);
+      
+      tx.addOperation(
+        Operation.changeTrust({
+          asset: new LiquidityPoolAsset(assetA, assetB, pool.feeBp),
+          limit: "922337203685.4775807"
+        })
+      );
+    }
+
+    const transaction = tx.addOperation(
         Operation.liquidityPoolDeposit({
           liquidityPoolId: pool.id,
           maxAmountA: maxAmountA.toFixed(7),
@@ -61,7 +80,7 @@ export class XdrBuilderService {
       .setTimeout(300)
       .build();
 
-    return tx.toXDR();
+    return transaction.toXDR();
   }
 
   async buildWithdrawXdr(

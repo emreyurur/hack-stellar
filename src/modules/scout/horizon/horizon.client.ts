@@ -65,6 +65,18 @@ export class HorizonClient {
     return records;
   }
 
+  async fetchPool(poolId: string): Promise<HorizonPoolResponse | null> {
+    try {
+      const response = await this.axios.get<HorizonPoolResponse>(`/liquidity_pools/${poolId}`);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   async fetchPoolTrades(
     poolId: string,
     hours = 24,

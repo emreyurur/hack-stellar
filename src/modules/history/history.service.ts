@@ -184,4 +184,30 @@ export class HistoryService {
     
     this.logger.log('Historical transaction sync completed.');
   }
+
+  async calculateUserCostBasis(publicKey: string, poolId: string): Promise<{ assetADeposited: string; assetBDeposited: string }> {
+    const history = await this.historyRepository.find({
+      where: { userPublicKey: publicKey, poolId },
+      order: { createdAt: 'ASC' }
+    });
+
+    let assetADeposited = 0;
+    let assetBDeposited = 0;
+
+    for (const tx of history) {
+      if (tx.type === TransactionType.DEPOSIT) {
+        assetADeposited += parseFloat(tx.amountA || '0');
+        assetBDeposited += parseFloat(tx.amountB || '0');
+      } else if (tx.type === TransactionType.WITHDRAW) {
+        assetADeposited -= parseFloat(tx.amountA || '0');
+        assetBDeposited -= parseFloat(tx.amountB || '0');
+      }
+    }
+
+    // Ensure it doesn't go below zero due to rounding or missing history
+    return {
+      assetADeposited: Math.max(0, assetADeposited).toString(),
+      assetBDeposited: Math.max(0, assetBDeposited).toString(),
+    };
+  }
 }

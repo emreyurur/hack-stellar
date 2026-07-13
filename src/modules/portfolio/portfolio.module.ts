@@ -6,11 +6,13 @@ import { PortfolioService } from "./portfolio.service";
 import { PortfolioController } from "./portfolio.controller";
 import { PnlCalculator } from "./pnl.calculator";
 import { ScoutModule } from "../scout/scout.module";
+import { HistoryModule } from "../history/history.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserPosition, PositionSnapshot]),
     ScoutModule,
+    HistoryModule,
   ],
   controllers: [PortfolioController],
   providers: [PortfolioService, PnlCalculator],

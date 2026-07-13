@@ -6,7 +6,8 @@ import { PnlCalculator } from "./pnl.calculator";
 import { PortfolioResponseDto } from "./dto/portfolio-response.dto";
 import { ScoutService } from "../scout/scout.service";
 import { HorizonClient } from "../scout/horizon/horizon.client";
-import { Logger } from "@nestjs/common";
+import { Logger, Inject, forwardRef } from "@nestjs/common";
+import { HistoryService } from "../history/history.service";
 
 @Injectable()
 export class PortfolioService {
@@ -18,6 +19,7 @@ export class PortfolioService {
     private readonly pnlCalculator: PnlCalculator,
     private readonly scoutService: ScoutService,
     private readonly horizonClient: HorizonClient,
+    private readonly historyService: HistoryService,
   ) {}
 
   async getPortfolio(publicKey: string): Promise<PortfolioResponseDto> {
@@ -75,8 +77,25 @@ export class PortfolioService {
       for (const pos of dbPositions) {
         const onChainMatch = lpBalances.find(b => b.liquidity_pool_id === pos.poolId);
         const actualShares = onChainMatch ? onChainMatch.balance : "0";
+        
+        // Always sync cost basis from exact history
+        const costBasis = await this.historyService.calculateUserCostBasis(publicKey, pos.poolId);
+
+        let changed = false;
         if (pos.sharesOwned !== actualShares) {
           pos.sharesOwned = actualShares;
+          changed = true;
+        }
+        if (pos.assetADeposited !== costBasis.assetADeposited) {
+          pos.assetADeposited = costBasis.assetADeposited;
+          changed = true;
+        }
+        if (pos.assetBDeposited !== costBasis.assetBDeposited) {
+          pos.assetBDeposited = costBasis.assetBDeposited;
+          changed = true;
+        }
+
+        if (changed) {
           await this.positionRepository.save(pos);
         }
       }
@@ -85,14 +104,19 @@ export class PortfolioService {
       for (const onChain of lpBalances) {
         const existsInDb = dbPositions.find(p => p.poolId === onChain.liquidity_pool_id);
         if (!existsInDb) {
-          const poolExists = await this.scoutService.getPool(onChain.liquidity_pool_id!);
+          let poolExists = await this.scoutService.getPool(onChain.liquidity_pool_id!);
+          if (!poolExists) {
+            poolExists = await this.scoutService.forceFetchPool(onChain.liquidity_pool_id!);
+          }
           if (poolExists) {
+            const costBasis = await this.historyService.calculateUserCostBasis(publicKey, onChain.liquidity_pool_id!);
+            
             const newPos = this.positionRepository.create({
               userPublicKey: publicKey,
               poolId: onChain.liquidity_pool_id!,
               sharesOwned: onChain.balance,
-              assetADeposited: "0",
-              assetBDeposited: "0",
+              assetADeposited: costBasis.assetADeposited,
+              assetBDeposited: costBasis.assetBDeposited,
             });
             await this.positionRepository.save(newPos);
           }

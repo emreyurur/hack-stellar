@@ -85,6 +85,13 @@ export class ScoutService {
     ); // 5dk cache
   }
 
+  async forceFetchPool(poolId: string): Promise<LiquidityPool | null> {
+    const horizonData = await this.horizonClient.fetchPool(poolId);
+    if (!horizonData) return null;
+    await this.upsertPool(horizonData);
+    return this.getPool(poolId);
+  }
+
   async takeDailySnapshots() {
     this.logger.log("Starting daily snapshots...");
     const activePools = await this.poolRepository.find({
