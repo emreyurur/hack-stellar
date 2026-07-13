@@ -7,6 +7,7 @@ import { ScoutModule } from "./modules/scout/scout.module";
 import { RiskModule } from "./modules/risk/risk.module";
 import { OrchestratorModule } from "./modules/orchestrator/orchestrator.module";
 import { PortfolioModule } from "./modules/portfolio/portfolio.module";
+import { TestnetToolsModule } from "./modules/testnet-tools/testnet-tools.module";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PortfolioModule } from "./modules/portfolio/portfolio.module";
     RiskModule,
     OrchestratorModule,
     PortfolioModule,
+    TestnetToolsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

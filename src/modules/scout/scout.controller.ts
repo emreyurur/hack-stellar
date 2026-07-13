@@ -12,7 +12,6 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from "@nestjs/swagger";
 import { ScoutService } from "./scout.service";
 import { PoolResponseDto } from "./dto/pool-response.dto";
 import { LiquidityPool } from "./entities/liquidity-pool.entity";
-import { AutomateLpDto } from "./dto/automate-lp.dto";
 
 @ApiTags("pools")
 @Controller("api/v1/pools")
@@ -77,18 +76,5 @@ export class ScoutController {
     // Süreç arka planda devam eder, kullanıcıya hemen cevap döner
     this.scoutService.takeDailySnapshots().catch(() => {});
     return { message: "Snapshot process started in background" };
-  }
-
-  @Post("testnet/automate-lp")
-  @ApiOperation({ summary: "Automate testnet token minting and LP deposit" })
-  @ApiResponse({ status: 201, description: "Successfully created token and LP" })
-  @ApiResponse({ status: 400, description: "Bad Request / Failed Transaction" })
-  async automateTestnetLp(@Body() dto: AutomateLpDto) {
-    try {
-      const result = await this.scoutService.automateTokenAndLP(dto);
-      return result;
-    } catch (error) {
-      throw new NotFoundException(error.message);
-    }
   }
 }

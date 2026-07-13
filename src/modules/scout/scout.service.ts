@@ -8,7 +8,6 @@ import { HorizonPoolResponse } from "./horizon/horizon.types";
 import { RedisService } from "../../core/redis/redis.service";
 import { PricingService } from "./pricing.service";
 import { CACHE_KEYS } from "../../shared/constants";
-import { Keypair, Horizon, Networks, Asset, TransactionBuilder, Operation, LiquidityPoolAsset, getLiquidityPoolId } from '@stellar/stellar-sdk';
 
 @Injectable()
 export class ScoutService {
@@ -254,109 +253,5 @@ export class ScoutService {
       },
       chartData: chartData,
     };
-  }
-
-  async automateTokenAndLP(params: {
-    issuerSecret?: string;
-    distributorSecret?: string;
-    tokenCode: string;
-    mintAmount: string;
-    depositXlmAmount: string;
-    depositTokenAmount: string;
-  }) {
-    this.logger.log('Starting automated Token Minting and LP Deposit...');
-
-    // 1. Anahtarları belirle
-    const issuerSecretStr = params.issuerSecret || process.env.TESTNET_ISSUER_SECRET;
-    const distributorSecretStr = params.distributorSecret || process.env.TESTNET_DISTRIBUTOR_SECRET;
-
-    if (!issuerSecretStr || !distributorSecretStr) {
-      throw new Error('Issuer and Distributor secrets are required (via DTO or .env)');
-    }
-
-    const issuerKeys = Keypair.fromSecret(issuerSecretStr);
-    const distributorKeys = Keypair.fromSecret(distributorSecretStr);
-
-    // 2. Tokenları Tanımla
-    const customToken = new Asset(params.tokenCode, issuerKeys.publicKey());
-    const nativeToken = Asset.native(); // XLM
-
-    // TODO: Ideally use a shared server instance from HorizonClient, but keeping it explicit for this testnet automation script
-    const server = new Horizon.Server('https://horizon-testnet.stellar.org');
-
-    try {
-      this.logger.log('Loading distributor account from Horizon...');
-      const distributorAccount = await server.loadAccount(distributorKeys.publicKey());
-
-      this.logger.log('Building transaction envelope...');
-      
-      const tx = new TransactionBuilder(distributorAccount, {
-        fee: '10000',
-        networkPassphrase: Networks.TESTNET,
-      })
-        // ADIM 1: Dağıtıcı, İhraççının tokenına güven limiti (Trustline) açar
-        .addOperation(
-          Operation.changeTrust({
-            asset: customToken,
-            limit: '1000000',
-          })
-        )
-        // ADIM 2: İhraççı, Dağıtıcıya token basar
-        .addOperation(
-          Operation.payment({
-            source: issuerKeys.publicKey(),
-            destination: distributorKeys.publicKey(),
-            asset: customToken,
-            amount: params.mintAmount,
-          })
-        )
-        // ADIM 3: Havuz Hisseleri (Pool Shares) için Güven Limiti açılır
-        .addOperation(
-          Operation.changeTrust({
-            asset: new LiquidityPoolAsset(nativeToken, customToken, 30),
-          })
-        )
-        // ADIM 4: Havuza Likidite Eklenir
-        .addOperation(
-          Operation.liquidityPoolDeposit({
-            liquidityPoolId: getLiquidityPoolId('constant_product', { assetA: nativeToken, assetB: customToken, fee: 30 }).toString('hex'),
-            maxAmountA: params.depositXlmAmount,
-            maxAmountB: params.depositTokenAmount,
-            minPrice: '0.01',
-            maxPrice: '100.0',
-          })
-        )
-        .setTimeout(180)
-        .build();
-
-      this.logger.log('Signing transaction...');
-      tx.sign(distributorKeys);
-      tx.sign(issuerKeys);
-
-      this.logger.log('Submitting transaction to network...');
-      const response = await server.submitTransaction(tx);
-      this.logger.log(`Success! Hash: ${response.hash}`);
-      
-      const poolId = getLiquidityPoolId('constant_product', { assetA: nativeToken, assetB: customToken, fee: 30 }).toString('hex');
-
-      return { 
-        success: true, 
-        hash: response.hash,
-        poolId: poolId,
-        tokenCode: params.tokenCode
-      };
-      
-    } catch (error) {
-      let errorMsg = error.message;
-      if (error.response?.data) {
-        if (error.response.data.extras?.result_codes) {
-          errorMsg = JSON.stringify(error.response.data.extras.result_codes);
-        } else {
-          errorMsg = JSON.stringify(error.response.data);
-        }
-      }
-      this.logger.error(`Error in automateTokenAndLP: ${errorMsg}`);
-      throw new Error(`Transaction failed: ${errorMsg}`);
-    }
   }
 }
