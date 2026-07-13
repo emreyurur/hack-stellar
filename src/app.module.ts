@@ -8,6 +8,7 @@ import { RiskModule } from "./modules/risk/risk.module";
 import { OrchestratorModule } from "./modules/orchestrator/orchestrator.module";
 import { PortfolioModule } from "./modules/portfolio/portfolio.module";
 import { TestnetToolsModule } from "./modules/testnet-tools/testnet-tools.module";
+import { HistoryModule } from "./modules/history/history.module";
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { TestnetToolsModule } from "./modules/testnet-tools/testnet-tools.module
     OrchestratorModule,
     PortfolioModule,
     TestnetToolsModule,
+    HistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

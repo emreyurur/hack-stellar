@@ -1,10 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Asset, Keypair, Operation, TransactionBuilder, Networks, LiquidityPoolAsset, Horizon, getLiquidityPoolId } from '@stellar/stellar-sdk';
 import { AutomateLpDto } from './dto/automate-lp.dto';
+import { HistoryService } from '../history/history.service';
+import { TransactionType } from '../history/entities/transaction-history.entity';
 
 @Injectable()
 export class TestnetToolsService {
   private readonly logger = new Logger(TestnetToolsService.name);
+
+  constructor(private readonly historyService: HistoryService) {}
 
   async automateTokenAndLP(params: AutomateLpDto) {
     this.logger.log('Starting automated Token Minting and LP Deposit...');
@@ -81,6 +85,18 @@ export class TestnetToolsService {
       this.logger.log(`Success! Hash: ${response.hash}`);
       
       const poolId = getLiquidityPoolId('constant_product', { assetA: nativeToken, assetB: customToken, fee: 30 }).toString('hex');
+
+      // Log the transaction
+      await this.historyService.logTransaction({
+        userPublicKey: distributorKeys.publicKey(),
+        poolId: poolId,
+        type: TransactionType.DEPOSIT,
+        assetA: 'XLM',
+        amountA: params.depositXlmAmount,
+        assetB: params.tokenCode,
+        amountB: params.depositTokenAmount,
+        tx: response.hash
+      });
 
       return { 
         success: true, 
@@ -180,6 +196,18 @@ export class TestnetToolsService {
       const response = await server.submitTransaction(tx);
       const poolId = getLiquidityPoolId('constant_product', { assetA, assetB, fee: 30 }).toString('hex');
 
+      // Log the transaction
+      await this.historyService.logTransaction({
+        userPublicKey: distributorKeys.publicKey(),
+        poolId: poolId,
+        type: TransactionType.DEPOSIT,
+        assetA: params.tokenCode1,
+        amountA: params.depositAmount1,
+        assetB: params.tokenCode2,
+        amountB: params.depositAmount2,
+        tx: response.hash
+      });
+
       return { 
         success: true, 
         hash: response.hash,
@@ -241,6 +269,15 @@ export class TestnetToolsService {
       tx.sign(issuerKeys);
 
       const response = await server.submitTransaction(tx);
+
+      // Log the transaction
+      await this.historyService.logTransaction({
+        userPublicKey: params.destination, // Recipient is the destination
+        type: TransactionType.MINT,
+        assetA: params.tokenCode,
+        amountA: params.amount,
+        tx: response.hash
+      });
 
       return { 
         success: true, 
