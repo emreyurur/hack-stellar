@@ -12,7 +12,11 @@ export class ApyCalculator {
     const dailyYield = dailyFeeIncome / tvlUsd;
 
     // (1 + dailyYield)^365 - 1
-    const apy = Math.pow(1 + dailyYield, 365) - 1;
+    // Cap the APY to avoid PostgreSQL 'real' type out of range errors for tiny pools with high volume.
+    let apy = Math.pow(1 + dailyYield, 365) - 1;
+    if (apy > 999999) {
+      apy = 999999;
+    }
 
     let score = 0;
     if (apy >= 0.2) score = 100;

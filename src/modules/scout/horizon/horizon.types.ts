@@ -45,6 +45,13 @@ export interface HorizonAccountResponse {
   account_id: string;
   sequence: string;
   home_domain?: string;
+  balances: Array<{
+    balance: string;
+    asset_type: string;
+    asset_code?: string;
+    asset_issuer?: string;
+    liquidity_pool_id?: string;
+  }>;
 }
 
 export interface HorizonPaginatedResponse<T> {

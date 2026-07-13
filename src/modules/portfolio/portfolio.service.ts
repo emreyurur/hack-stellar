@@ -5,17 +5,24 @@ import { UserPosition } from "./entities/user-position.entity";
 import { PnlCalculator } from "./pnl.calculator";
 import { PortfolioResponseDto } from "./dto/portfolio-response.dto";
 import { ScoutService } from "../scout/scout.service";
+import { HorizonClient } from "../scout/horizon/horizon.client";
+import { Logger } from "@nestjs/common";
 
 @Injectable()
 export class PortfolioService {
+  private readonly logger = new Logger(PortfolioService.name);
+
   constructor(
     @InjectRepository(UserPosition)
     private readonly positionRepository: Repository<UserPosition>,
     private readonly pnlCalculator: PnlCalculator,
     private readonly scoutService: ScoutService,
+    private readonly horizonClient: HorizonClient,
   ) {}
 
   async getPortfolio(publicKey: string): Promise<PortfolioResponseDto> {
+    await this.syncBlockchainBalances(publicKey);
+
     const positions = await this.positionRepository.find({
       where: { userPublicKey: publicKey },
       relations: ["pool"],
@@ -53,6 +60,47 @@ export class PortfolioService {
       totalPnlUsd,
       positions: positionDtos,
     };
+  }
+
+  private async syncBlockchainBalances(publicKey: string) {
+    try {
+      const account = await this.horizonClient.fetchAccount(publicKey);
+      if (!account || !account.balances) return;
+
+      const lpBalances = account.balances.filter(b => b.asset_type === 'liquidity_pool_shares' && b.liquidity_pool_id);
+      
+      const dbPositions = await this.positionRepository.find({ where: { userPublicKey: publicKey } });
+
+      // Update existing positions
+      for (const pos of dbPositions) {
+        const onChainMatch = lpBalances.find(b => b.liquidity_pool_id === pos.poolId);
+        const actualShares = onChainMatch ? onChainMatch.balance : "0";
+        if (pos.sharesOwned !== actualShares) {
+          pos.sharesOwned = actualShares;
+          await this.positionRepository.save(pos);
+        }
+      }
+
+      // Create missing positions if they have balances and the pool exists in our scout db
+      for (const onChain of lpBalances) {
+        const existsInDb = dbPositions.find(p => p.poolId === onChain.liquidity_pool_id);
+        if (!existsInDb) {
+          const poolExists = await this.scoutService.getPool(onChain.liquidity_pool_id!);
+          if (poolExists) {
+            const newPos = this.positionRepository.create({
+              userPublicKey: publicKey,
+              poolId: onChain.liquidity_pool_id!,
+              sharesOwned: onChain.balance,
+              assetADeposited: "0",
+              assetBDeposited: "0",
+            });
+            await this.positionRepository.save(newPos);
+          }
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`Failed to sync blockchain balances for ${publicKey}: ${e.message}`);
+    }
   }
 
   // Frontend'den başarılı işlem sonrasında webhook/callback geldiğinde veya
@@ -108,6 +156,8 @@ export class PortfolioService {
       const reserveB = parseFloat(pool.reserveB) || 0;
       marketSizeUsd += (reserveA + reserveB) * 0.1; // Using the same dummy pricing logic as risk service for now
     }
+
+    await this.syncBlockchainBalances(publicKey);
 
     // 2. Fetch User Positions
     const positions = await this.positionRepository.find({
