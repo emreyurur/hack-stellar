@@ -25,7 +25,7 @@ export class HorizonClient {
       },
       async (error) => {
         if (error.response?.status === 429) {
-          this.logger.warn('Rate limit hit. Retrying after delay...');
+          this.logger.debug('Rate limit hit. Retrying after 2s delay...');
           await new Promise((resolve) => setTimeout(resolve, 2000));
           return this.axios(error.config);
         }
@@ -47,6 +47,7 @@ export class HorizonClient {
         break; // Son sayfa
       }
       nextUrl = response.data._links.next.href;
+      await new Promise(resolve => setTimeout(resolve, 500)); // Proactive delay
     }
     return records;
   }
@@ -74,6 +75,7 @@ export class HorizonClient {
         break;
       }
       nextUrl = response.data._links.next.href;
+      await new Promise(resolve => setTimeout(resolve, 500)); // Proactive delay
     }
     return records;
   }
@@ -129,13 +131,31 @@ export class HorizonClient {
     const cutoffTime = new Date(Date.now() - hours * 3600 * 1000).getTime();
 
     try {
-      const response = await this.axios.get<HorizonPaginatedResponse<HorizonTradeResponse>>('/trades', { params });
-      const newRecords = response.data._embedded.records;
+      let nextUrl = '/trades';
+      let currentParams = params;
+      
+      while (nextUrl) {
+        const response = await this.axios.get<HorizonPaginatedResponse<HorizonTradeResponse>>(nextUrl, { params: currentParams });
+        const newRecords = response.data._embedded.records;
+        
+        // After first request, params are embedded in nextUrl, so we don't pass them again
+        currentParams = undefined as any; 
+        
+        let reachedCutoff = false;
+        for (const record of newRecords) {
+          const tradeTime = new Date(record.ledger_close_time).getTime();
+          if (tradeTime < cutoffTime) {
+            reachedCutoff = true;
+            break;
+          }
+          records.push(record);
+        }
 
-      for (const record of newRecords) {
-        const tradeTime = new Date(record.ledger_close_time).getTime();
-        if (tradeTime < cutoffTime) break;
-        records.push(record);
+        if (reachedCutoff || newRecords.length < 200) {
+          break;
+        }
+        nextUrl = response.data._links.next.href;
+        await new Promise(resolve => setTimeout(resolve, 500)); // Proactive delay
       }
     } catch (e) {
       if (e.response?.status === 404) {

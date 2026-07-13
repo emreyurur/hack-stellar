@@ -21,7 +21,7 @@ export class ScoutService {
     private readonly horizonClient: HorizonClient,
     private readonly redisService: RedisService,
     private readonly pricingService: PricingService,
-  ) {}
+  ) { }
 
   async syncLiquidityPools() {
     this.logger.log('Starting liquidity pools sync...');
@@ -87,7 +87,7 @@ export class ScoutService {
     for (const pool of activePools) {
       try {
         const trades = await this.horizonClient.fetchPoolTrades(pool.id, 24);
-        
+
         let volumeA = 0;
         let volumeB = 0;
 
@@ -107,10 +107,10 @@ export class ScoutService {
         // PricingService kullanarak gerçek USD fiyatlarını çekiyoruz
         const priceAUsd = await this.pricingService.getAssetUsdPrice(pool.assetACode, pool.assetAIssuer);
         const priceBUsd = await this.pricingService.getAssetUsdPrice(pool.assetBCode, pool.assetBIssuer);
-        
+
         const tvlUsd = (parseFloat(pool.reserveA) * priceAUsd) + (parseFloat(pool.reserveB) * priceBUsd);
         const volume24hUsd = (volumeA * priceAUsd) + (volumeB * priceBUsd); // Hacim de gerçek fiyattan hesaplanır
-        
+
         // Sadece Düşük Hacimli pool filtrelemesine takılmayanlar (Örn: TVL/Hacim çok düşükse skip)
         // Burada basitçe snapshot alıyoruz.
         const snapshot = this.snapshotRepository.create({
@@ -126,6 +126,9 @@ export class ScoutService {
           snapshotAt: new Date(),
         });
         await this.snapshotRepository.save(snapshot);
+
+        // Rate limit'i aşmamak için her havuz arasında 1 saniye bekle
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e) {
         this.logger.error(`Error taking snapshot for pool ${pool.id}: ${e.message}`);
       }

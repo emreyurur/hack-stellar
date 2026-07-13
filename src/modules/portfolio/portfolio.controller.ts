@@ -20,6 +20,12 @@ export class PortfolioController {
     return this.portfolioService.getPortfolio(publicKey);
   }
 
+  @Get('lending-dashboard/:publicKey')
+  @ApiOperation({ summary: 'Get lending-style dashboard (using real AMM data)' })
+  async getLendingDashboard(@Param('publicKey') publicKey: string) {
+    return this.portfolioService.getLendingDashboard(publicKey);
+  }
+
   @Post('sync')
   @ApiOperation({ summary: 'Sync user position after successful transaction' })
   async syncPosition(

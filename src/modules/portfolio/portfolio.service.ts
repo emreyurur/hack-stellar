@@ -79,4 +79,64 @@ export class PortfolioService {
 
     await this.positionRepository.save(position);
   }
+
+  async getLendingDashboard(publicKey: string) {
+    // 1. Calculate Global Market Size (Total TVL across all pools in the system)
+    const allPools = await this.scoutService.getPools(1, 1000); 
+    let marketSizeUsd = 0;
+    
+    // Instead of querying all pools via scoutService if it's heavy, we can do a rough estimate or 
+    // fetch snapshot TVLs. Let's assume we can fetch them.
+    for (const pool of allPools.data || []) {
+      // Very basic TVL estimation if we don't have snapshots loaded here
+      const reserveA = parseFloat(pool.reserveA) || 0;
+      const reserveB = parseFloat(pool.reserveB) || 0;
+      marketSizeUsd += (reserveA + reserveB) * 0.1; // Using the same dummy pricing logic as risk service for now
+    }
+
+    // 2. Fetch User Positions
+    const positions = await this.positionRepository.find({
+      where: { userPublicKey: publicKey },
+      relations: ['pool'],
+    });
+
+    let vaultDepositsUsd = 0; // User's total value
+    let totalPnlUsd = 0;
+    const assets = [];
+
+    for (const position of positions) {
+      const pool = await this.scoutService.getPool(position.poolId);
+      if (!pool) continue;
+
+      const metrics = this.pnlCalculator.calculatePositionMetrics(position, pool);
+
+      vaultDepositsUsd += metrics.currentValueUsd;
+      totalPnlUsd += metrics.pnlUsd;
+
+      // In Option 1, we map AMM data to Lending UI fields
+      assets.push({
+        poolId: position.poolId,
+        assetName: `${pool.assetACode}-${pool.assetBCode} LP`, 
+        positionValueUsd: metrics.currentValueUsd,
+        supplyApy: metrics.impermanentLossPct, // Showing IL% as the "APY" stat for the UI
+        interestEarnedUsd: metrics.pnlUsd,     // Showing PnL as "Interest Earned"
+        vaultProfile: 'Dynamic',               // We can fetch from RiskService in a full implementation
+      });
+    }
+
+    return {
+      globalStats: {
+        marketSizeUsd,
+        vaultDepositsUsd, // For this specific user, the "Vault Deposits" is their portfolio value
+      },
+      userOverview: {
+        activePositions: positions.length,
+        positionsValueUsd: vaultDepositsUsd,
+        avgApy: assets.length > 0 ? (assets.reduce((acc, curr) => acc + curr.supplyApy, 0) / assets.length) : 0,
+        interestEarnedUsd: totalPnlUsd,
+      },
+      assets,
+    };
+  }
 }
+

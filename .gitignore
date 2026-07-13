@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 .env
+
+# Rust / Soroban Contract
+/contracts/**/target/
+**/*.rs.bk
+Cargo.lock
