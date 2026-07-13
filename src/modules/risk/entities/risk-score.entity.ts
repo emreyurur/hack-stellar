@@ -1,41 +1,48 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
-import { LiquidityPool } from '../../scout/entities/liquidity-pool.entity';
-import { RISK_LEVELS } from '../../../shared/constants';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from "typeorm";
+import { LiquidityPool } from "../../scout/entities/liquidity-pool.entity";
+import { RISK_LEVELS } from "../../../shared/constants";
 
-@Entity('risk_scores')
-@Index(['poolId', 'calculatedAt'])
+@Entity("risk_scores")
+@Index(["poolId", "calculatedAt"])
 export class RiskScore {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column('varchar', { length: 64 })
+  @Column("varchar", { length: 64 })
   poolId: string;
 
-  @ManyToOne(() => LiquidityPool, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'pool_id' })
+  @ManyToOne(() => LiquidityPool, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "pool_id" })
   pool: LiquidityPool;
 
-  @Column('real')
+  @Column("real")
   trustScore: number;
 
-  @Column('real')
+  @Column("real")
   tvlScore: number;
 
-  @Column('real')
+  @Column("real")
   volatilityScore: number;
 
-  @Column('real')
+  @Column("real")
   apyScore: number;
 
-  @Column('real')
+  @Column("real")
   compositeScore: number;
 
-  @Column('varchar', { length: 10, default: RISK_LEVELS.MEDIUM })
+  @Column("varchar", { length: 10, default: RISK_LEVELS.MEDIUM })
   riskLevel: string;
 
-  @Column('real', { nullable: true })
+  @Column("real", { nullable: true })
   estimatedApy: number | null;
 
-  @Column('timestamptz')
+  @Column("timestamptz")
   calculatedAt: Date;
 }

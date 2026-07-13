@@ -1,16 +1,16 @@
-import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ConfigType } from '@nestjs/config';
-import { appConfig } from '../../config/app.config';
-import { RiskScore } from './entities/risk-score.entity';
-import { TrustScorer } from './scorers/trust.scorer';
-import { TvlScorer } from './scorers/tvl.scorer';
-import { VolatilityScorer } from './scorers/volatility.scorer';
-import { ApyCalculator } from './scorers/apy.calculator';
-import { ScoutService } from '../scout/scout.service';
-import { PoolSnapshot } from '../scout/entities/pool-snapshot.entity';
-import { RISK_LEVELS } from '../../shared/constants';
+import { Injectable, Inject, Logger, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { ConfigType } from "@nestjs/config";
+import { appConfig } from "../../config/app.config";
+import { RiskScore } from "./entities/risk-score.entity";
+import { TrustScorer } from "./scorers/trust.scorer";
+import { TvlScorer } from "./scorers/tvl.scorer";
+import { VolatilityScorer } from "./scorers/volatility.scorer";
+import { ApyCalculator } from "./scorers/apy.calculator";
+import { ScoutService } from "../scout/scout.service";
+import { PoolSnapshot } from "../scout/entities/pool-snapshot.entity";
+import { RISK_LEVELS } from "../../shared/constants";
 
 @Injectable()
 export class RiskService {
@@ -27,7 +27,7 @@ export class RiskService {
     private readonly tvlScorer: TvlScorer,
     private readonly volatilityScorer: VolatilityScorer,
     private readonly apyCalculator: ApyCalculator,
-  ) { }
+  ) {}
 
   async calculatePoolRisk(poolId: string): Promise<RiskScore> {
     const pool = await this.scoutService.getPool(poolId);
@@ -38,7 +38,7 @@ export class RiskService {
     // Veritabanından en son snapshot'ı doğrudan çek
     const latestSnapshot = await this.snapshotRepository.findOne({
       where: { poolId },
-      order: { snapshotAt: 'DESC' },
+      order: { snapshotAt: "DESC" },
     });
 
     // Eğer snapshot yoksa, pool reserve'lerinden anlık TVL tahmini yap
@@ -48,7 +48,9 @@ export class RiskService {
 
     if (latestSnapshot?.tvlUsd) {
       tvlUsd = parseFloat(latestSnapshot.tvlUsd);
-      volume24hUsd = latestSnapshot.volume24hUsd ? parseFloat(latestSnapshot.volume24hUsd) : 0;
+      volume24hUsd = latestSnapshot.volume24hUsd
+        ? parseFloat(latestSnapshot.volume24hUsd)
+        : 0;
     } else {
       // Snapshot yoksa reserve'lerden kaba tahmin (1 birim = 0.1 USD placeholder)
       const reserveA = parseFloat(pool.reserveA) || 0;
@@ -61,7 +63,10 @@ export class RiskService {
     const trustScore = await this.trustScorer.score(pool);
     const tvlScore = this.tvlScorer.score(tvlUsd);
     const volatilityScore = await this.volatilityScorer.score(poolId);
-    const { apy, score: apyScore } = this.apyCalculator.calculate(volume24hUsd, tvlUsd);
+    const { apy, score: apyScore } = this.apyCalculator.calculate(
+      volume24hUsd,
+      tvlUsd,
+    );
 
     const weights = this.config.riskWeights;
     const compositeScore =
@@ -72,7 +77,8 @@ export class RiskService {
 
     let riskLevel = RISK_LEVELS.MEDIUM;
     if (compositeScore >= 67) riskLevel = RISK_LEVELS.LOW;
-    else if (compositeScore <= 33 || tvlScore <= 10) riskLevel = RISK_LEVELS.HIGH; // Force high risk if very low TVL
+    else if (compositeScore <= 33 || tvlScore <= 10)
+      riskLevel = RISK_LEVELS.HIGH; // Force high risk if very low TVL
 
     let riskRecord = await this.riskRepository.findOne({ where: { poolId } });
     if (!riskRecord) {
@@ -95,14 +101,18 @@ export class RiskService {
     return this.riskRepository.findOne({ where: { poolId } });
   }
 
-  async getPoolsByRiskLevel(level: string, page: number = 1, limit: number = 50) {
+  async getPoolsByRiskLevel(
+    level: string,
+    page: number = 1,
+    limit: number = 50,
+  ) {
     const skip = (page - 1) * limit;
     const [data, total] = await this.riskRepository.findAndCount({
       where: { riskLevel: level.toUpperCase() },
-      relations: ['pool'],
+      relations: ["pool"],
       skip,
       take: limit,
-      order: { compositeScore: 'DESC' }, // En güvenliden en riskliye doğru
+      order: { compositeScore: "DESC" }, // En güvenliden en riskliye doğru
     });
 
     return {

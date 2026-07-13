@@ -1,12 +1,16 @@
-import { registerAs } from '@nestjs/config';
+import { registerAs } from "@nestjs/config";
 
-export const appConfig = registerAs('app', () => ({
-  horizonUrl: process.env.HORIZON_URL || 'https://horizon-testnet.stellar.org',
-  networkPassphrase: process.env.NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015',
+export const appConfig = registerAs("app", () => ({
+  horizonUrl: process.env.HORIZON_URL || "https://horizon-testnet.stellar.org",
+  networkPassphrase:
+    process.env.NETWORK_PASSPHRASE || "Test SDF Network ; September 2015",
 
-  poolSyncIntervalMs: parseInt(process.env.POOL_SYNC_INTERVAL_MS || '300000', 10),
+  poolSyncIntervalMs: parseInt(
+    process.env.POOL_SYNC_INTERVAL_MS || "300000",
+    10,
+  ),
 
-  minTvlUsd: parseFloat(process.env.MIN_TVL_USD || '50000'),
+  minTvlUsd: parseFloat(process.env.MIN_TVL_USD || "50000"),
   riskWeights: {
     trust: 0.3,
     tvl: 0.3,
@@ -14,12 +18,12 @@ export const appConfig = registerAs('app', () => ({
     apy: 0.2,
   },
 
-  defaultSlippageBps: parseInt(process.env.DEFAULT_SLIPPAGE_BPS || '100', 10),
-  maxSlippageBps: parseInt(process.env.MAX_SLIPPAGE_BPS || '500', 10),
+  defaultSlippageBps: parseInt(process.env.DEFAULT_SLIPPAGE_BPS || "100", 10),
+  maxSlippageBps: parseInt(process.env.MAX_SLIPPAGE_BPS || "500", 10),
 
-  poolCacheTtl: parseInt(process.env.POOL_CACHE_TTL || '300', 10),
-  tomlCacheTtl: parseInt(process.env.TOML_CACHE_TTL || '86400', 10),
+  poolCacheTtl: parseInt(process.env.POOL_CACHE_TTL || "300", 10),
+  tomlCacheTtl: parseInt(process.env.TOML_CACHE_TTL || "86400", 10),
 
-  jwtSecret: process.env.JWT_SECRET || 'fallback-secret',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  jwtSecret: process.env.JWT_SECRET || "fallback-secret",
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "24h",
 }));

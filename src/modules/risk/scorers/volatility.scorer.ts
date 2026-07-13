@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PoolSnapshot } from '../../scout/entities/pool-snapshot.entity';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { PoolSnapshot } from "../../scout/entities/pool-snapshot.entity";
 
 @Injectable()
 export class VolatilityScorer {
@@ -13,7 +13,7 @@ export class VolatilityScorer {
   async score(poolId: string): Promise<number> {
     const snapshots = await this.snapshotRepository.find({
       where: { poolId },
-      order: { snapshotAt: 'DESC' },
+      order: { snapshotAt: "DESC" },
       take: 7, // Last 7 days
     });
 
@@ -33,18 +33,20 @@ export class VolatilityScorer {
     // Calculate daily returns standard deviation
     const returns: number[] = [];
     for (let i = 0; i < priceRatios.length - 1; i++) {
-      const dailyReturn = (priceRatios[i] - priceRatios[i+1]) / priceRatios[i+1];
+      const dailyReturn =
+        (priceRatios[i] - priceRatios[i + 1]) / priceRatios[i + 1];
       returns.push(dailyReturn);
     }
 
     const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+    const variance =
+      returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
     const stdDev = Math.sqrt(variance);
 
     if (stdDev < 0.01) return 95;
     if (stdDev < 0.03) return 70;
     if (stdDev < 0.07) return 45;
-    
+
     return 15;
   }
 

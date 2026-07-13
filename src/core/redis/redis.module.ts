@@ -1,9 +1,9 @@
-import { Module, Global } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
-import { BullModule } from '@nestjs/bullmq';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { redisStore } from 'cache-manager-ioredis-yet';
-import { RedisService } from './redis.service';
+import { Module, Global } from "@nestjs/common";
+import { CacheModule } from "@nestjs/cache-manager";
+import { BullModule } from "@nestjs/bullmq";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { redisStore } from "cache-manager-ioredis-yet";
+import { RedisService } from "./redis.service";
 
 @Global()
 @Module({
@@ -13,8 +13,8 @@ import { RedisService } from './redis.service';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         store: redisStore,
-        host: configService.get<string>('REDIS_HOST', 'localhost'),
-        port: configService.get<number>('REDIS_PORT', 6379),
+        host: configService.get<string>("REDIS_HOST", "localhost"),
+        port: configService.get<number>("REDIS_PORT", 6379),
         db: 0, // Cache için DB 0
       }),
     }),
@@ -23,8 +23,8 @@ import { RedisService } from './redis.service';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         connection: {
-          host: configService.get<string>('REDIS_HOST', 'localhost'),
-          port: configService.get<number>('REDIS_PORT', 6379),
+          host: configService.get<string>("REDIS_HOST", "localhost"),
+          port: configService.get<number>("REDIS_PORT", 6379),
           db: 1, // Queue broker için DB 1
         },
       }),

@@ -1,46 +1,58 @@
-import { Entity, Column, PrimaryColumn, OneToMany } from 'typeorm';
-import { PoolSnapshot } from './pool-snapshot.entity';
-import { decimalTransformer } from '../../../shared/utils/decimal.transformer';
+import { Entity, Column, PrimaryColumn, OneToMany } from "typeorm";
+import { PoolSnapshot } from "./pool-snapshot.entity";
+import { decimalTransformer } from "../../../shared/utils/decimal.transformer";
 
-@Entity('liquidity_pools')
+@Entity("liquidity_pools")
 export class LiquidityPool {
-  @PrimaryColumn('varchar', { length: 64 })
+  @PrimaryColumn("varchar", { length: 64 })
   id: string;
 
-  @Column('smallint')
+  @Column("smallint")
   feeBp: number;
 
-  @Column('varchar', { length: 20, default: 'constant_product' })
+  @Column("varchar", { length: 20, default: "constant_product" })
   type: string;
 
-  @Column('decimal', { precision: 20, scale: 7, transformer: decimalTransformer })
+  @Column("decimal", {
+    precision: 20,
+    scale: 7,
+    transformer: decimalTransformer,
+  })
   totalShares: string;
 
-  @Column('varchar', { length: 12 })
+  @Column("varchar", { length: 12 })
   assetACode: string;
 
-  @Column('varchar', { length: 56, nullable: true })
+  @Column("varchar", { length: 56, nullable: true })
   assetAIssuer: string | null;
 
-  @Column('decimal', { precision: 20, scale: 7, transformer: decimalTransformer })
+  @Column("decimal", {
+    precision: 20,
+    scale: 7,
+    transformer: decimalTransformer,
+  })
   reserveA: string;
 
-  @Column('varchar', { length: 12 })
+  @Column("varchar", { length: 12 })
   assetBCode: string;
 
-  @Column('varchar', { length: 56, nullable: true })
+  @Column("varchar", { length: 56, nullable: true })
   assetBIssuer: string | null;
 
-  @Column('decimal', { precision: 20, scale: 7, transformer: decimalTransformer })
+  @Column("decimal", {
+    precision: 20,
+    scale: 7,
+    transformer: decimalTransformer,
+  })
   reserveB: string;
 
-  @Column('int', { default: 0 })
+  @Column("int", { default: 0 })
   totalTrustlines: number;
 
-  @Column('timestamptz')
+  @Column("timestamptz")
   lastSyncedAt: Date;
 
-  @Column('boolean', { default: true })
+  @Column("boolean", { default: true })
   isActive: boolean;
 
   @OneToMany(() => PoolSnapshot, (s) => s.pool)

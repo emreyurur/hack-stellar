@@ -1,13 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { LiquidityPool } from './entities/liquidity-pool.entity';
-import { PoolSnapshot } from './entities/pool-snapshot.entity';
-import { HorizonClient } from './horizon/horizon.client';
-import { HorizonPoolResponse } from './horizon/horizon.types';
-import { RedisService } from '../../core/redis/redis.service';
-import { PricingService } from './pricing.service';
-import { CACHE_KEYS } from '../../shared/constants';
+import { Injectable, Logger } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { LiquidityPool } from "./entities/liquidity-pool.entity";
+import { PoolSnapshot } from "./entities/pool-snapshot.entity";
+import { HorizonClient } from "./horizon/horizon.client";
+import { HorizonPoolResponse } from "./horizon/horizon.types";
+import { RedisService } from "../../core/redis/redis.service";
+import { PricingService } from "./pricing.service";
+import { CACHE_KEYS } from "../../shared/constants";
 
 @Injectable()
 export class ScoutService {
@@ -21,10 +21,10 @@ export class ScoutService {
     private readonly horizonClient: HorizonClient,
     private readonly redisService: RedisService,
     private readonly pricingService: PricingService,
-  ) { }
+  ) {}
 
   async syncLiquidityPools() {
-    this.logger.log('Starting liquidity pools sync...');
+    this.logger.log("Starting liquidity pools sync...");
     const pools = await this.horizonClient.fetchAllPools();
     this.logger.log(`Fetched ${pools.length} pools from Horizon`);
 
@@ -37,21 +37,22 @@ export class ScoutService {
 
     // Olmayan poolları isActive = false yap
     if (activePoolIds.size > 0) {
-      await this.poolRepository.createQueryBuilder()
+      await this.poolRepository
+        .createQueryBuilder()
         .update(LiquidityPool)
         .set({ isActive: false })
-        .where('id NOT IN (:...ids)', { ids: Array.from(activePoolIds) })
+        .where("id NOT IN (:...ids)", { ids: Array.from(activePoolIds) })
         .execute();
     }
-    this.logger.log('Liquidity pools sync completed.');
+    this.logger.log("Liquidity pools sync completed.");
   }
 
   private async upsertPool(data: HorizonPoolResponse) {
     const parseAsset = (assetString: string) => {
-      if (assetString === 'native') {
-        return { code: 'XLM', issuer: null };
+      if (assetString === "native") {
+        return { code: "XLM", issuer: null };
       }
-      const [code, issuer] = assetString.split(':');
+      const [code, issuer] = assetString.split(":");
       return { code, issuer };
     };
 
@@ -77,12 +78,18 @@ export class ScoutService {
     pool.isActive = true;
 
     await this.poolRepository.save(pool);
-    await this.redisService.set(`${CACHE_KEYS.POOL_PREFIX}${pool.id}`, pool, 300); // 5dk cache
+    await this.redisService.set(
+      `${CACHE_KEYS.POOL_PREFIX}${pool.id}`,
+      pool,
+      300,
+    ); // 5dk cache
   }
 
   async takeDailySnapshots() {
-    this.logger.log('Starting daily snapshots...');
-    const activePools = await this.poolRepository.find({ where: { isActive: true } });
+    this.logger.log("Starting daily snapshots...");
+    const activePools = await this.poolRepository.find({
+      where: { isActive: true },
+    });
 
     for (const pool of activePools) {
       try {
@@ -105,11 +112,19 @@ export class ScoutService {
         }
 
         // PricingService kullanarak gerçek USD fiyatlarını çekiyoruz
-        const priceAUsd = await this.pricingService.getAssetUsdPrice(pool.assetACode, pool.assetAIssuer);
-        const priceBUsd = await this.pricingService.getAssetUsdPrice(pool.assetBCode, pool.assetBIssuer);
+        const priceAUsd = await this.pricingService.getAssetUsdPrice(
+          pool.assetACode,
+          pool.assetAIssuer,
+        );
+        const priceBUsd = await this.pricingService.getAssetUsdPrice(
+          pool.assetBCode,
+          pool.assetBIssuer,
+        );
 
-        const tvlUsd = (parseFloat(pool.reserveA) * priceAUsd) + (parseFloat(pool.reserveB) * priceBUsd);
-        const volume24hUsd = (volumeA * priceAUsd) + (volumeB * priceBUsd); // Hacim de gerçek fiyattan hesaplanır
+        const tvlUsd =
+          parseFloat(pool.reserveA) * priceAUsd +
+          parseFloat(pool.reserveB) * priceBUsd;
+        const volume24hUsd = volumeA * priceAUsd + volumeB * priceBUsd; // Hacim de gerçek fiyattan hesaplanır
 
         // Sadece Düşük Hacimli pool filtrelemesine takılmayanlar (Örn: TVL/Hacim çok düşükse skip)
         // Burada basitçe snapshot alıyoruz.
@@ -128,12 +143,14 @@ export class ScoutService {
         await this.snapshotRepository.save(snapshot);
 
         // Rate limit'i aşmamak için her havuz arasında 1 saniye bekle
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (e) {
-        this.logger.error(`Error taking snapshot for pool ${pool.id}: ${e.message}`);
+        this.logger.error(
+          `Error taking snapshot for pool ${pool.id}: ${e.message}`,
+        );
       }
     }
-    this.logger.log('Daily snapshots completed.');
+    this.logger.log("Daily snapshots completed.");
   }
 
   async getPools(page: number = 1, limit: number = 50) {
@@ -142,7 +159,7 @@ export class ScoutService {
       where: { isActive: true },
       skip,
       take: limit,
-      order: { totalTrustlines: 'DESC' }, // Daha çok kullanılan havuzlar üstte
+      order: { totalTrustlines: "DESC" }, // Daha çok kullanılan havuzlar üstte
     });
 
     return {
@@ -156,5 +173,85 @@ export class ScoutService {
 
   async getPool(id: string) {
     return this.poolRepository.findOne({ where: { id } });
+  }
+
+  async getPoolDashboard(poolId: string) {
+    const pool = await this.getPool(poolId);
+    if (!pool) return null;
+
+    // Son 90 günün snapshotlarını çek
+    const snapshots = await this.snapshotRepository.find({
+      where: { poolId },
+      order: { snapshotAt: "ASC" },
+      take: 90,
+    });
+
+    let profile = "Balanced";
+    try {
+      const riskScore = await this.poolRepository.manager.query(
+        `SELECT risk_level FROM risk_scores WHERE pool_id = $1 ORDER BY calculated_at DESC LIMIT 1`,
+        [poolId],
+      );
+      if (riskScore && riskScore.length > 0) {
+        profile = riskScore[0].risk_level;
+      }
+    } catch (e) {
+      // Ignore if table doesn't exist or error
+    }
+
+    let totalSupplied = 0;
+    let utilization = 0;
+    let supplyApy = 0;
+    let avg90dApy = 0;
+    const chartData = [];
+
+    let sumApy = 0;
+
+    if (snapshots.length > 0) {
+      const latest = snapshots[snapshots.length - 1];
+      totalSupplied = parseFloat(latest.tvlUsd || "0");
+
+      const vol24h = parseFloat(latest.volume24hUsd || "0");
+      utilization = totalSupplied > 0 ? (vol24h / totalSupplied) * 100 : 0;
+
+      // APY = (Volume * Fee * 365) / TVL
+      supplyApy =
+        totalSupplied > 0
+          ? ((vol24h * (pool.feeBp / 10000) * 365) / totalSupplied) * 100
+          : 0;
+
+      for (const s of snapshots) {
+        const t = parseFloat(s.tvlUsd || "0");
+        const v = parseFloat(s.volume24hUsd || "0");
+        const apy = t > 0 ? ((v * (pool.feeBp / 10000) * 365) / t) * 100 : 0;
+        sumApy += apy;
+
+        chartData.push({
+          timestamp: s.snapshotAt,
+          supplyApy: apy,
+          totalSupply: t,
+        });
+      }
+
+      avg90dApy = sumApy / snapshots.length;
+    }
+
+    const assetName = `${pool.assetACode}-${pool.assetBCode} Prime`;
+
+    return {
+      vaultOverview: {
+        totalSupplied: totalSupplied,
+        totalBorrowed: 0, // Placeholder
+        utilization: utilization,
+        supplyApy: supplyApy,
+        supplyApy90dAvg: avg90dApy,
+      },
+      strategyOverview: {
+        name: assetName,
+        profile: profile,
+        description: `${assetName} is a liquidity provisioning strategy designed to enable superior risk-adjusted yields via allocation into highly liquid Stellar AMM markets.`,
+      },
+      chartData: chartData,
+    };
   }
 }

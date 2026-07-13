@@ -17,7 +17,7 @@ export interface HorizonPoolResponse {
     {
       asset: string;
       amount: string;
-    }
+    },
   ];
 }
 

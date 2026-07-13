@@ -1,0 +1,60 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - backend
+      - main
+  pull_request:
+    branches:
+      - backend
+      - main
+
+jobs:
+  backend-checks:
+    name: Backend (NestJS) Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test --passWithNoTests
+
+      - name: Build
+        run: npm run build
+
+  contract-checks:
+    name: Smart Contract (Soroban) Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./contracts/pool-voting
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ./contracts/pool-voting -> target
+
+      - name: Test Contracts
+        run: cargo test

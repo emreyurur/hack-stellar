@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
-import { LiquidityPool } from '../../scout/entities/liquidity-pool.entity';
-import { RedisService } from '../../../core/redis/redis.service';
-import { CACHE_KEYS } from '../../../shared/constants';
-import { HorizonClient } from '../../scout/horizon/horizon.client';
+import { Injectable, Logger } from "@nestjs/common";
+import axios from "axios";
+import { LiquidityPool } from "../../scout/entities/liquidity-pool.entity";
+import { RedisService } from "../../../core/redis/redis.service";
+import { CACHE_KEYS } from "../../../shared/constants";
+import { HorizonClient } from "../../scout/horizon/horizon.client";
 
 @Injectable()
 export class TrustScorer {
@@ -20,7 +20,10 @@ export class TrustScorer {
     return (scoreA + scoreB) / 2;
   }
 
-  private async scoreAsset(code: string, issuer: string | null): Promise<number> {
+  private async scoreAsset(
+    code: string,
+    issuer: string | null,
+  ): Promise<number> {
     if (!issuer) {
       return 100; // Native XLM is fully trusted
     }
@@ -46,7 +49,10 @@ export class TrustScorer {
           if (tomlData.includes(code) && tomlData.includes(issuer)) {
             score += 50;
           }
-          if (tomlData.includes('regulated = true') || tomlData.includes('regulated=true')) {
+          if (
+            tomlData.includes("regulated = true") ||
+            tomlData.includes("regulated=true")
+          ) {
             score += 20;
           }
         }
@@ -58,16 +64,28 @@ export class TrustScorer {
     return Math.min(score, 100);
   }
 
-  private async checkStellarExpertList(code: string, issuer: string): Promise<boolean> {
-    let verifiedAssets = await this.redisService.get<any[]>(CACHE_KEYS.VERIFIED_ASSETS);
-    
+  private async checkStellarExpertList(
+    code: string,
+    issuer: string,
+  ): Promise<boolean> {
+    let verifiedAssets = await this.redisService.get<any[]>(
+      CACHE_KEYS.VERIFIED_ASSETS,
+    );
+
     if (!verifiedAssets) {
       try {
-        const response = await axios.get('https://api.stellar.expert/explorer/public/asset', {
-          params: { search: code, rating: '1', limit: 50 }
-        });
+        const response = await axios.get(
+          "https://api.stellar.expert/explorer/public/asset",
+          {
+            params: { search: code, rating: "1", limit: 50 },
+          },
+        );
         verifiedAssets = response.data?._embedded?.records || [];
-        await this.redisService.set(CACHE_KEYS.VERIFIED_ASSETS, verifiedAssets, 86400); // 24h
+        await this.redisService.set(
+          CACHE_KEYS.VERIFIED_ASSETS,
+          verifiedAssets,
+          86400,
+        ); // 24h
       } catch (e) {
         this.logger.warn(`Failed to fetch StellarExpert assets: ${e.message}`);
         return false;
@@ -80,19 +98,22 @@ export class TrustScorer {
   private async fetchStellarToml(domain: string): Promise<string | null> {
     const cacheKey = `${CACHE_KEYS.TOML_PREFIX}${domain}`;
     let toml = await this.redisService.get<string>(cacheKey);
-    
+
     if (!toml) {
       try {
-        const response = await axios.get(`https://${domain}/.well-known/stellar.toml`, { timeout: 5000 });
+        const response = await axios.get(
+          `https://${domain}/.well-known/stellar.toml`,
+          { timeout: 5000 },
+        );
         toml = response.data;
         await this.redisService.set(cacheKey, toml, 86400); // 24h
       } catch (e) {
         // Mark as failed in cache for 1 hour to avoid spamming
-        await this.redisService.set(cacheKey, 'FAILED', 3600);
+        await this.redisService.set(cacheKey, "FAILED", 3600);
         return null;
       }
     }
-    
-    return toml === 'FAILED' ? null : toml;
+
+    return toml === "FAILED" ? null : toml;
   }
 }

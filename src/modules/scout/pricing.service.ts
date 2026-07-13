@@ -1,12 +1,12 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
-import { ConfigType } from '@nestjs/config';
-import { appConfig } from '../../config/app.config';
-import { HorizonClient } from './horizon/horizon.client';
-import { RedisService } from '../../core/redis/redis.service';
+import { Injectable, Logger, Inject } from "@nestjs/common";
+import { ConfigType } from "@nestjs/config";
+import { appConfig } from "../../config/app.config";
+import { HorizonClient } from "./horizon/horizon.client";
+import { RedisService } from "../../core/redis/redis.service";
 
 // Stellar mainnet'te en yaygın USDC issuer
-const USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
-const USDC_CODE = 'USDC';
+const USDC_ISSUER = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+const USDC_CODE = "USDC";
 
 @Injectable()
 export class PricingService {
@@ -16,36 +16,40 @@ export class PricingService {
     @Inject(appConfig.KEY) private config: ConfigType<typeof appConfig>,
     private readonly horizonClient: HorizonClient,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   /**
    * XLM/USD fiyatını Horizon'daki XLM/USDC trade'lerinden VWAP ile hesaplar.
    * 5 dakika cache'lenir.
    */
   async getXlmUsdPrice(): Promise<number> {
-    const cacheKey = 'price:xlm_usd';
+    const cacheKey = "price:xlm_usd";
     const cached = await this.redisService.get<number>(cacheKey);
     if (cached) return cached;
 
     try {
       const trades = await this.horizonClient.fetchTradesByAssets(
-        'native', '', // XLM
-        USDC_CODE, USDC_ISSUER,
+        "native",
+        "", // XLM
+        USDC_CODE,
+        USDC_ISSUER,
         24,
       );
 
       if (trades.length === 0) {
         // this.logger.warn('No XLM/USDC trades found, using fallback price');
-        return 0.10; // Son çare fallback
+        return 0.1; // Son çare fallback
       }
 
       const vwap = this.calculateVwap(trades);
       await this.redisService.set(cacheKey, vwap, 300); // 5dk cache
-      this.logger.log(`XLM/USD VWAP: $${vwap.toFixed(6)} (from ${trades.length} trades)`);
+      this.logger.log(
+        `XLM/USD VWAP: $${vwap.toFixed(6)} (from ${trades.length} trades)`,
+      );
       return vwap;
     } catch (e) {
       this.logger.error(`Failed to fetch XLM/USD price: ${e.message}`);
-      return 0.10; // Fallback
+      return 0.1; // Fallback
     }
   }
 
@@ -58,12 +62,12 @@ export class PricingService {
    */
   async getAssetUsdPrice(code: string, issuer: string | null): Promise<number> {
     // Native XLM
-    if (!issuer || code === 'XLM') {
+    if (!issuer || code === "XLM") {
       return this.getXlmUsdPrice();
     }
 
     // Stablecoin'ler
-    if (code === 'USDC' || code === 'USDT') {
+    if (code === "USDC" || code === "USDT") {
       return 1.0;
     }
 
@@ -74,16 +78,20 @@ export class PricingService {
     try {
       // Asset/XLM trade'lerinden VWAP hesapla
       const trades = await this.horizonClient.fetchTradesByAssets(
-        code, issuer,
-        'native', '', // XLM karşısında
+        code,
+        issuer,
+        "native",
+        "", // XLM karşısında
         24,
       );
 
       if (trades.length === 0) {
         // XLM ile trade yoksa, USDC ile dene
         const usdcTrades = await this.horizonClient.fetchTradesByAssets(
-          code, issuer,
-          USDC_CODE, USDC_ISSUER,
+          code,
+          issuer,
+          USDC_CODE,
+          USDC_ISSUER,
           24,
         );
 

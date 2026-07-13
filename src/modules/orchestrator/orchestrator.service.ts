@@ -1,13 +1,15 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
-import { ConfigType } from '@nestjs/config';
-import { appConfig } from '../../config/app.config';
-import { BuildTransactionDto, TransactionAction } from './dto/transaction-request.dto';
-import { BuiltTransactionDto } from './dto/transaction-response.dto';
-import { ScoutService } from '../scout/scout.service';
-import { RiskService } from '../risk/risk.service';
-import { XdrBuilderService } from './services/xdr-builder.service';
-import { SlippageService } from './services/slippage.service';
-import { RISK_LEVELS } from '../../shared/constants';
+import { Injectable, BadRequestException, Inject } from "@nestjs/common";
+import { ConfigType } from "@nestjs/config";
+import { appConfig } from "../../config/app.config";
+import {
+  BuildTransactionDto,
+  TransactionAction,
+} from "./dto/transaction-request.dto";
+import { BuiltTransactionDto } from "./dto/transaction-response.dto";
+import { ScoutService } from "../scout/scout.service";
+import { RiskService } from "../risk/risk.service";
+import { XdrBuilderService } from "./services/xdr-builder.service";
+import { SlippageService } from "./services/slippage.service";
 
 @Injectable()
 export class OrchestratorService {
@@ -17,19 +19,19 @@ export class OrchestratorService {
     private readonly riskService: RiskService,
     private readonly xdrBuilder: XdrBuilderService,
     private readonly slippageService: SlippageService,
-  ) { }
+  ) {}
 
   async buildTransaction(
     publicKey: string,
-    dto: BuildTransactionDto
+    dto: BuildTransactionDto,
   ): Promise<BuiltTransactionDto> {
     const pool = await this.scoutService.getPool(dto.poolId);
     if (!pool) {
-      throw new BadRequestException('Pool not found');
+      throw new BadRequestException("Pool not found");
     }
 
     // Risk Check
-    const risk = await this.riskService.getRiskByPoolId(dto.poolId);
+    // const risk = await this.riskService.getRiskByPoolId(dto.poolId);
     //if (risk && risk.riskLevel === RISK_LEVELS.HIGH) {
     //  throw new BadRequestException('Cannot interact with HIGH risk pools');
     //}
@@ -41,7 +43,7 @@ export class OrchestratorService {
     const totalShares = parseFloat(pool.totalShares);
 
     if (reserveA === 0 || reserveB === 0) {
-      throw new BadRequestException('Pool is empty');
+      throw new BadRequestException("Pool is empty");
     }
 
     const currentPrice = reserveA / reserveB;
@@ -50,7 +52,9 @@ export class OrchestratorService {
 
     if (dto.action === TransactionAction.DEPOSIT) {
       if (!dto.amountA || !dto.amountB) {
-        throw new BadRequestException('amountA and amountB required for deposit');
+        throw new BadRequestException(
+          "amountA and amountB required for deposit",
+        );
       }
 
       const slippageBps = dto.slippageBps || this.config.defaultSlippageBps;
@@ -66,12 +70,12 @@ export class OrchestratorService {
         dto.amountA,
         dto.amountB,
         minPrice,
-        maxPrice
+        maxPrice,
       );
     } else {
       // WITHDRAW
       if (!dto.shareAmount) {
-        throw new BadRequestException('shareAmount required for withdraw');
+        throw new BadRequestException("shareAmount required for withdraw");
       }
 
       // Pool'daki payın oranı
@@ -82,7 +86,7 @@ export class OrchestratorService {
       const { minA, minB } = this.slippageService.calculateMinAmounts(
         expectedA,
         expectedB,
-        dto.slippageBps
+        dto.slippageBps,
       );
 
       xdr = await this.xdrBuilder.buildWithdrawXdr(
@@ -90,7 +94,7 @@ export class OrchestratorService {
         pool,
         dto.shareAmount,
         minA,
-        minB
+        minB,
       );
     }
 

@@ -1,39 +1,39 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from "@nestjs/swagger";
 
 export class PoolResponseDto {
-  @ApiProperty({ description: 'Horizon Pool ID' })
+  @ApiProperty({ description: "Horizon Pool ID" })
   id: string;
 
-  @ApiProperty({ description: 'Fee in basis points' })
+  @ApiProperty({ description: "Fee in basis points" })
   feeBp: number;
 
-  @ApiProperty({ description: 'Pool type (e.g., constant_product)' })
+  @ApiProperty({ description: "Pool type (e.g., constant_product)" })
   type: string;
 
-  @ApiProperty({ description: 'Total shares of the pool' })
+  @ApiProperty({ description: "Total shares of the pool" })
   totalShares: string;
 
-  @ApiProperty({ description: 'Asset A Code' })
+  @ApiProperty({ description: "Asset A Code" })
   assetACode: string;
 
-  @ApiProperty({ description: 'Asset A Issuer', required: false })
+  @ApiProperty({ description: "Asset A Issuer", required: false })
   assetAIssuer: string | null;
 
-  @ApiProperty({ description: 'Asset A Reserve' })
+  @ApiProperty({ description: "Asset A Reserve" })
   reserveA: string;
 
-  @ApiProperty({ description: 'Asset B Code' })
+  @ApiProperty({ description: "Asset B Code" })
   assetBCode: string;
 
-  @ApiProperty({ description: 'Asset B Issuer', required: false })
+  @ApiProperty({ description: "Asset B Issuer", required: false })
   assetBIssuer: string | null;
 
-  @ApiProperty({ description: 'Asset B Reserve' })
+  @ApiProperty({ description: "Asset B Reserve" })
   reserveB: string;
 
-  @ApiProperty({ description: 'Total trustlines' })
+  @ApiProperty({ description: "Total trustlines" })
   totalTrustlines: number;
 
-  @ApiProperty({ description: 'Last synced time' })
+  @ApiProperty({ description: "Last synced time" })
   lastSyncedAt: Date;
 }

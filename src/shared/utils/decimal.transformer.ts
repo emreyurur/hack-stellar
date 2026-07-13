@@ -1,4 +1,4 @@
-import { ValueTransformer } from 'typeorm';
+import { ValueTransformer } from "typeorm";
 
 export const decimalTransformer: ValueTransformer = {
   to: (value: any) => {

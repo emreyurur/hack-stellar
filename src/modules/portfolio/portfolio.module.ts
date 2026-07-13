@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserPosition } from './entities/user-position.entity';
-import { PositionSnapshot } from './entities/position-snapshot.entity';
-import { PortfolioService } from './portfolio.service';
-import { PortfolioController } from './portfolio.controller';
-import { PnlCalculator } from './pnl.calculator';
-import { ScoutModule } from '../scout/scout.module';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { UserPosition } from "./entities/user-position.entity";
+import { PositionSnapshot } from "./entities/position-snapshot.entity";
+import { PortfolioService } from "./portfolio.service";
+import { PortfolioController } from "./portfolio.controller";
+import { PnlCalculator } from "./pnl.calculator";
+import { ScoutModule } from "../scout/scout.module";
 
 @Module({
   imports: [
