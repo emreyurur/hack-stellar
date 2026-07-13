@@ -186,7 +186,7 @@
   </div>
 
   <script>
-    const API_BASE = 'http://localhost:3000';
+    const API_BASE = 'https://batuhantekin.icu/stellar/';
     const HORIZON_URL = 'https://horizon-testnet.stellar.org';
 
     let jwtToken = null;
@@ -365,7 +365,7 @@
           statusDiv.className = 'status success';
           statusDiv.innerText = 'İşlem Başarıyla Gerçekleşti! Portföy senkronize ediliyor...';
           resultPre.innerText = `Hash: ${submitData.hash}\nLedger: ${submitData.ledger}`;
-          
+
           // Portfolyo Senkronizasyonu
           const action = document.getElementById('actionSelect').value;
           let syncShares = "10.0"; // Demo amaçlı tahmini pool share değeri

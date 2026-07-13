@@ -27,5 +27,4 @@ dist-ssr
 
 # Rust / Soroban Contract
 /contracts/**/target/
-**/*.rs.bk
-Cargo.lock
+**/*.rs.bk
