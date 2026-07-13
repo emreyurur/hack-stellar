@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { API_BASE } from '../services/terminal8Api'
 import type { DeFiPool, PoolReputation, RiskProfile } from '../types/stellar'
 
 // ─── Raw API types ─────────────────────────────────────────────────────────────
@@ -70,26 +71,28 @@ function deriveRisk(reputation: PoolReputation): RiskProfile {
  * Format a raw reserve number into a human-friendly TVL string.
  * We use the larger reserve as the TVL proxy (usually the stablecoin side).
  */
-function formatTvl(reserveA: number, reserveB: number): { tvl: string; tvlRaw: number } {
-  const tvlRaw = Math.max(reserveA, reserveB)
+function formatTvl(reserveA?: number, reserveB?: number): { tvl: string; tvlRaw: number } {
+  const tvlRaw = (Number(reserveA) || 0) + (Number(reserveB) || 0)
+  if (tvlRaw >= 1_000_000_000) {
+    const bVal = (tvlRaw / 1_000_000_000).toFixed(3).replace(/\.?0+$/, '')
+    return { tvl: `$${bVal}B`, tvlRaw }
+  }
   if (tvlRaw >= 1_000_000) {
-    return { tvl: `$${(tvlRaw / 1_000_000).toFixed(2)}M`, tvlRaw }
+    const mVal = (tvlRaw / 1_000_000).toFixed(2).replace(/\.?0+$/, '')
+    return { tvl: `$${mVal}M`, tvlRaw }
   }
   if (tvlRaw >= 1_000) {
-    return { tvl: `$${(tvlRaw / 1_000).toFixed(1)}K`, tvlRaw }
+    const kVal = (tvlRaw / 1_000).toFixed(1).replace(/\.?0+$/, '')
+    return { tvl: `$${kVal}K`, tvlRaw }
   }
   return { tvl: `$${tvlRaw.toFixed(0)}`, tvlRaw }
 }
 
-/**
- * Derive a rough estimated APY from the fee tier and pool activity.
- * Real APY calculation requires volume data, which this endpoint doesn't expose.
- * We approximate: feeBp / 100  gives fee %. We assume a reasonable volume/TVL ratio.
- */
 function estimateApy(pool: ApiPool): number {
-  const feePct = pool.feeBp / 100
-  // Volume/TVL ratio assumption based on trustlines (proxy for activity)
-  const volumeRatio = Math.min(3, 0.5 + pool.totalTrustlines * 0.3)
+  const feeBp = Number.isFinite(Number(pool.feeBp)) ? Number(pool.feeBp) : 30
+  const feePct = feeBp / 100
+  const trustlines = Number.isFinite(Number(pool.totalTrustlines)) ? Number(pool.totalTrustlines) : 10
+  const volumeRatio = Math.min(3, 0.5 + trustlines * 0.3)
   return parseFloat((feePct * 365 * volumeRatio).toFixed(1))
 }
 
@@ -99,33 +102,37 @@ function mapApiPoolToDeFiPool(pool: ApiPool): DeFiPool {
   const { tvl, tvlRaw } = formatTvl(pool.reserveA, pool.reserveB)
   const apy = estimateApy(pool)
 
-  // Display order: XLM first, then as-is
-  let assetA = pool.assetACode
-  let assetB = pool.assetBCode
+  let assetA = pool.assetACode || 'XLM'
+  let assetB = pool.assetBCode || 'USDC'
+  let resA = Number(pool.reserveA) || 0
+  let resB = Number(pool.reserveB) || 0
   if (pool.assetBCode === 'XLM') {
     assetA = pool.assetBCode
-    assetB = pool.assetACode
+    assetB = pool.assetACode || 'USDC'
+    resA = Number(pool.reserveB) || 0
+    resB = Number(pool.reserveA) || 0
   }
 
-  const supportedAssets = new Set(['XLM', 'USDC', 'EURC'])
-  const poolAsset = supportedAssets.has(assetA) ? (assetA as DeFiPool['asset']) : 'USDC'
+  const feeBpSafe = Number.isFinite(Number(pool.feeBp)) ? Number(pool.feeBp) : 30
 
   return {
-    id: pool.id,
+    id: pool.id || `pool_${Date.now()}`,
     protocol: 'Soroswap AMM',
     category: 'AMM LP',
-    asset: poolAsset,
+    asset: assetA,
     secondaryAsset: assetB,
     apy,
     tvl,
     tvlRaw,
     volume24h: '—',
+    reserveA: resA,
+    reserveB: resB,
     reputation,
     risk,
     method: 'addLiquidity()',
-    rationale: `Add liquidity to the ${assetA} / ${assetB} pool and earn ${(pool.feeBp / 100).toFixed(2)}% swap fees.`,
-    contractId: pool.id.slice(0, 8) + '…' + pool.id.slice(-6),
-    feeBp: pool.feeBp,
+    rationale: `Add liquidity to the ${assetA} / ${assetB} pool and earn ${(feeBpSafe / 100).toFixed(2)}% swap fees.`,
+    contractId: pool.id ? pool.id.slice(0, 8) + '…' + pool.id.slice(-6) : 'SoroswapPool',
+    feeBp: feeBpSafe,
   }
 }
 
@@ -136,7 +143,7 @@ export type PoolsState =
   | { status: 'success'; pools: DeFiPool[] }
   | { status: 'error'; message: string }
 
-const API_URL = 'http://localhost:3000/api/v1/pools?page=1&limit=20'
+const API_URL = `${API_BASE}api/v1/pools?page=1&limit=15`
 
 export function usePools(): PoolsState {
   const [state, setState] = useState<PoolsState>({ status: 'loading' })
@@ -146,16 +153,40 @@ export function usePools(): PoolsState {
 
     async function fetchPools() {
       try {
-        const res = await fetch(API_URL, { headers: { accept: '*/*' } })
-        if (!res.ok) throw new Error(`API returned ${res.status}`)
-        const json: ApiResponse = await res.json()
+        const id1 = 'badef3833c6c0765df43b3af3cfe0bb7b7919937143a234171cde7b8d72c4f45'
+        const id2 = 'd26f6a1f9a4ef102a196925226e34d03842611fd7c84b31a5ceb49c304e62848'
+
+        const [listRes, p1Res, p2Res] = await Promise.allSettled([
+          fetch(API_URL, { headers: { accept: '*/*' } }),
+          fetch(`${API_BASE}api/v1/pools/${id1}`, { headers: { accept: '*/*' } }),
+          fetch(`${API_BASE}api/v1/pools/${id2}`, { headers: { accept: '*/*' } }),
+        ])
+
+        if (listRes.status === 'rejected' || !listRes.value.ok) {
+          throw new Error('API returned error')
+        }
+
+        const json: ApiResponse = await listRes.value.json()
 
         if (!cancelled) {
-          const pools = json.data
-            .filter((p) => p.isActive)
-            // Sort by largest reserve (highest liquidity first)
-            .sort((a, b) => Math.max(b.reserveA, b.reserveB) - Math.max(a.reserveA, a.reserveB))
-            .slice(0, 20)
+          const rawList = Array.isArray(json?.data) ? json.data : []
+
+          const topPools: ApiPool[] = []
+          if (p1Res.status === 'fulfilled' && p1Res.value.ok) {
+            const p1Json = await p1Res.value.json()
+            if (p1Json?.id) topPools.push(p1Json)
+          }
+          if (p2Res.status === 'fulfilled' && p2Res.value.ok) {
+            const p2Json = await p2Res.value.json()
+            if (p2Json?.id) topPools.push(p2Json)
+          }
+
+          const topIds = new Set(topPools.map((p) => p.id))
+          const restPools = rawList.filter((p) => !topIds.has(p.id))
+
+          const allRaw = [...topPools, ...restPools]
+          const pools = allRaw
+            .filter((p) => p.isActive !== false)
             .map(mapApiPoolToDeFiPool)
 
           setState({ status: 'success', pools })

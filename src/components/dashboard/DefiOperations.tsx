@@ -1,15 +1,60 @@
-import { useState, type ReactNode } from 'react'
+import { Component, useEffect, useMemo, useState, type ReactNode } from 'react'
 import xlmLogo from '../../assets/xlm.svg'
 import usdcLogo from '../../assets/usdc.svg'
 import aquaLogo from '../../assets/aquaris.svg'
 import { reputationLabel, reputationTotal, stellarPools } from '../../data/stellarMock'
 import { useWallet } from '../../context/useWallet'
 import { classifyWalletError } from '../../lib/walletErrors'
-import { executeMockTestnetSupply } from '../../services/mockTestnetSupply'
-import { executeMockTestnetWithdraw } from '../../services/mockTestnetWithdraw'
-import { estimateSecondaryAmount, executeSoroswapAddLiquidity } from '../../services/soroswapLiquidity'
-import type { DeFiPool, LocalPosition, RiskProfile } from '../../types/stellar'
+import { estimateSecondaryAmount } from '../../services/soroswapLiquidity'
+import { executeApiPoolTransaction, fetchPoolRisk, type PoolRiskResponse } from '../../services/terminal8Api'
+import { signTransaction } from '@stellar/freighter-api'
+import { usePortfolioDashboard } from '../../hooks/usePortfolioDashboard'
+import type { DeFiPool, LocalPosition, RiskProfile, WalletBalance } from '../../types/stellar'
+import { usePools } from '../../hooks/usePools'
 import { PoolDetailsView } from './PoolDetailsView'
+
+class SafeErrorBoundary extends Component<{ onReset: () => void; children: ReactNode }, { hasError: boolean; errorMessage: string; errorStack: string }> {
+  constructor(props: { onReset: () => void; children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false, errorMessage: '', errorStack: '' }
+  }
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      hasError: true,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack || '' : '',
+    }
+  }
+  componentDidCatch(error: Error) {
+    console.error('PoolDetailsView crashed:', error)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-2xl border border-red-500/30 bg-[#111119] p-8 text-center">
+          <p className="text-lg font-bold text-red-400">Unable to display pool details</p>
+          <p className="mt-2 text-sm font-mono text-white">{this.state.errorMessage}</p>
+          {this.state.errorStack && (
+            <pre className="mt-4 max-h-40 overflow-auto rounded-lg bg-black/40 p-3 text-left text-xs text-[#9CA3AF]">
+              {this.state.errorStack}
+            </pre>
+          )}
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, errorMessage: '', errorStack: '' })
+              this.props.onReset()
+            }}
+            className="mt-6 rounded-xl bg-[#F2C12E] px-6 py-2.5 text-xs font-bold text-[#0D0D12]"
+            type="button"
+          >
+            ← Back to Overview
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function getNowTimestamp(): number {
   return Date.now()
@@ -23,6 +68,7 @@ const TOKEN_COLORS: Record<string, string> = {
   BTC: '#f59e0b',
   ETH: '#8b5cf6',
   EURC: '#6366f1',
+  YRK: '#f59e0b',
 }
 
 function tokenBg(code: string): string {
@@ -33,8 +79,9 @@ function tokenBg(code: string): string {
   return palette[h % palette.length]
 }
 
-function TokenAvatar({ code }: { code: string; size?: string }) {
-  const upper = code.toUpperCase()
+function TokenAvatar({ code = 'XLM' }: { code?: string; size?: string }) {
+  const safeCode = typeof code === 'string' && code ? code : 'XLM'
+  const upper = safeCode.toUpperCase()
   if (upper === 'XLM' || upper === 'YXLM') {
     return (
       <img
@@ -68,12 +115,13 @@ function TokenAvatar({ code }: { code: string; size?: string }) {
       className="flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ring-2 ring-[#0D0D12]"
       style={{ backgroundColor: tokenBg(code) }}
     >
-      {code.slice(0, 3)}
+      {code.slice(0, 4)}
     </div>
   )
 }
 
 export function DefiOperations({
+  balances,
   onPositionAdded,
   onRetakeQuiz,
   onWithdrawn,
@@ -82,6 +130,7 @@ export function DefiOperations({
   usdcBalance,
   xlmBalance,
 }: {
+  balances?: WalletBalance[]
   onPositionAdded: (pos: Omit<LocalPosition, 'id'>) => void
   onRetakeQuiz: () => void
   onWithdrawn: (id: string, amount: number) => void
@@ -91,39 +140,123 @@ export function DefiOperations({
   xlmBalance: number
 }) {
   void onRetakeQuiz
-  void onWithdrawn
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null)
+  const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null)
   const [detailTab, setDetailTab] = useState<'overview' | 'position'>('overview')
   const [expandedReputation, setExpandedReputation] = useState<string | null>(null)
   const [filterTab, setFilterTab] = useState<'all' | 'stables' | 'xlm'>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredPools = stellarPools.filter((pool) => {
+  const { publicKey } = useWallet()
+  const portfolioState = usePortfolioDashboard(publicKey)
+
+  const displayPositions = useMemo(() => {
+    if (!publicKey) return []
+    const apiPosList = portfolioState.state.status === 'success' ? portfolioState.state.data.portfolio.positions : []
+    const mappedApi: LocalPosition[] = apiPosList.map((apiP, idx) => ({
+      id: `api_pos_${idx}_${apiP.poolId || apiP.asset}`,
+      poolId: apiP.poolId || '',
+      asset: apiP.asset || 'XLM',
+      amount: Number(apiP.amount ?? apiP.shares ?? 0),
+      apy: Number(apiP.apy ?? 5.5),
+      openedAt: 1720000000000,
+      hash: `api_hash_${idx}`,
+      protocol: 'Soroswap',
+      status: 'success',
+      timestamp: '12:00:00 AM',
+      category: 'AMM LP',
+    }))
+    const combined = [...positions]
+    for (const p of mappedApi) {
+      if (!combined.some((c) => (c.poolId === p.poolId || c.asset === p.asset) && Math.abs(c.amount - p.amount) < 0.001)) {
+        combined.push(p)
+      }
+    }
+    return combined
+  }, [publicKey, positions, portfolioState.state])
+
+  const poolsState = usePools()
+  const activePools =
+    poolsState.status === 'success' && poolsState.pools.length > 0
+      ? poolsState.pools.slice(0, 15)
+      : stellarPools.slice(0, 15)
+
+  const filteredPools = activePools.filter((pool) => {
     const pairStr = `${pool.asset} ${pool.secondaryAsset ?? ''} ${pool.protocol}`.toLowerCase()
     if (searchQuery && !pairStr.includes(searchQuery.toLowerCase())) return false
     if (filterTab === 'xlm') return pool.asset === 'XLM' || pool.secondaryAsset === 'XLM'
     if (filterTab === 'stables') {
-      const stables = ['USDC', 'EURC', 'USDT', 'DAI']
+      const stables = ['USDC', 'EURC', 'USDT', 'DAI', 'USDW']
       return stables.includes(pool.asset) || (pool.secondaryAsset && stables.includes(pool.secondaryAsset))
     }
     return true
   })
 
-  const selectedPool = stellarPools.find((p) => p.id === selectedPoolId) ?? null
-  const featuredPools = stellarPools.slice(0, 3)
+  const positionPools: DeFiPool[] = displayPositions.map((pos) => ({
+    id: pos.poolId,
+    asset: pos.asset || 'XLM',
+    name: `${pos.asset || 'XLM'} Vault`,
+    protocol: 'Soroswap',
+    apy: Number.isFinite(Number(pos.apy)) ? Number(pos.apy) : 12.5,
+    tvl: '$1.2M',
+    tvlRaw: 1200000,
+    risk: 'Conservative',
+    category: 'AMM LP',
+    feeBp: 30,
+    reputation: { liquidity: 20, age: 10, audit: 10, activity: 10 },
+    method: 'addLiquidity()',
+    rationale: 'Active user position liquidity pool.',
+    contractId: pos.poolId || 'SoroswapPool',
+  }))
+
+  const allKnownPools = [
+    ...activePools,
+    ...(poolsState.status === 'success' ? poolsState.pools : []),
+    ...stellarPools,
+    ...positionPools,
+  ]
+  const selectedPool = allKnownPools.find((p) => p.id === selectedPoolId) ?? null
+  const featuredPools = activePools.slice(0, 3)
+
+  const getAvailableBalance = (assetCode?: string) => {
+    if (!assetCode || typeof assetCode !== 'string') return 0
+    if (!balances || balances.length === 0) {
+      return assetCode === 'XLM' ? xlmBalance : usdcBalance
+    }
+    const matching = balances.filter((b) => b.code && typeof b.code === 'string' && b.code.toUpperCase() === assetCode.toUpperCase())
+    if (matching.length === 0) return 0
+    return matching.reduce((max, b) => Math.max(max, Number(b.balance) || 0), 0)
+  }
 
   if (selectedPool) {
     return (
-      <PoolDetailsView
-        available={selectedPool.asset === 'XLM' ? xlmBalance : usdcBalance}
-        initialTab={detailTab}
-        onBack={() => setSelectedPoolId(null)}
-        onPositionAdded={(pos) => {
-          onPositionAdded(pos)
+      <SafeErrorBoundary
+        onReset={() => {
+          setSelectedPoolId(null)
+          setSelectedPositionId(null)
         }}
-        pool={selectedPool}
-        userPositions={positions.filter((p) => p.poolId === selectedPool.id || p.asset === selectedPool.asset)}
-      />
+      >
+        <PoolDetailsView
+          available={getAvailableBalance(selectedPool.asset)}
+          initialTab={detailTab}
+          onBack={() => {
+            setSelectedPoolId(null)
+            setSelectedPositionId(null)
+          }}
+          onPositionAdded={(pos) => {
+            onPositionAdded(pos)
+          }}
+          onPositionRemoved={(id, amount) => {
+            onWithdrawn(id, amount)
+          }}
+          pool={selectedPool}
+          userPositions={
+            selectedPositionId
+              ? displayPositions.filter((p) => p.id === selectedPositionId)
+              : displayPositions.filter((p) => p.poolId === selectedPool.id)
+          }
+        />
+      </SafeErrorBoundary>
     )
   }
 
@@ -150,41 +283,45 @@ export function DefiOperations({
 
               {/* 4 Summary Cards Row */}
               {(() => {
-                const totalValUsd = positions.reduce((acc, p) => {
+                const totalValUsd = displayPositions.reduce((acc, p) => {
                   const price = p.asset === 'XLM' ? 0.12 : 1
                   return acc + p.amount * price
                 }, 0)
                 const weightedApy = totalValUsd > 0
-                  ? positions.reduce((acc, p) => {
+                  ? displayPositions.reduce((acc, p) => {
                       const price = p.asset === 'XLM' ? 0.12 : 1
                       return acc + (p.amount * price * p.apy)
                     }, 0) / totalValUsd
-                  : positions.reduce((acc, p) => acc + p.apy, 0) / positions.length
-                const totalEarnedUsd = positions.reduce((acc, p) => {
+                  : displayPositions.reduce((acc, p) => acc + p.apy, 0) / (displayPositions.length || 1)
+                const totalEarnedUsd = displayPositions.reduce((acc, p) => {
                   const price = p.asset === 'XLM' ? 0.12 : 1
                   const elapsed = Date.now() - p.openedAt
                   const hours = elapsed / 3_600_000
                   const earned = p.amount * (p.apy / 100) * (hours / 8760)
                   return acc + earned * price
                 }, 0)
+                const displayCount = displayPositions.length
+                const displayValUsd = totalValUsd
+                const displayApy = Number.isFinite(weightedApy) ? weightedApy : 0
+                const displayEarned = totalEarnedUsd
 
                 return (
                   <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
                       <p className="text-xs text-[#9CA3AF]">Active Positions</p>
-                      <p className="mt-2 font-mono text-2xl font-bold text-white">{positions.length}</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-white">{displayCount}</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
                       <p className="text-xs text-[#9CA3AF]">Positions Value</p>
-                      <p className="mt-2 font-mono text-2xl font-bold text-white">${totalValUsd.toFixed(2)}</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-white">${(Number(displayValUsd) || 0).toFixed(2)}</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
                       <p className="text-xs text-[#9CA3AF]">Avg APY</p>
-                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">{weightedApy.toFixed(2)}%</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">{(Number(displayApy) || 0).toFixed(2)}%</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
                       <p className="text-xs text-[#9CA3AF]">Interest Earned</p>
-                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">+${totalEarnedUsd.toFixed(4)}</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">+${(Number(displayEarned) || 0).toFixed(4)}</p>
                     </div>
                   </div>
                 )
@@ -205,16 +342,16 @@ export function DefiOperations({
 
                   {/* Table Rows */}
                   <div className="divide-y divide-white/[0.06]">
-                    {positions.map((pos) => {
-                      const matchingPool = stellarPools.find((p) => p.id === pos.poolId || p.asset === pos.asset) ?? stellarPools[0]
-                      const price = pos.asset === 'XLM' ? 0.12 : 1
-                      const posValUsd = pos.amount * price
-                      const elapsed = getNowTimestamp() - pos.openedAt
-                      const hours = elapsed / 3_600_000
-                      const earned = pos.amount * (pos.apy / 100) * (hours / 8760)
-                      const earnedUsd = earned * price
+                    {displayPositions.map((pos) => {
+                        const matchingPool = allKnownPools.find((p) => p.id === pos.poolId || p.asset === pos.asset) ?? activePools[0]
+                        const price = pos.asset === 'XLM' ? 0.12 : 1
+                        const posValUsd = pos.amount * price
+                        const elapsed = getNowTimestamp() - pos.openedAt
+                        const hours = elapsed / 3_600_000
+                        const earned = pos.amount * (pos.apy / 100) * (hours / 8760)
+                        const earnedUsd = earned * price
 
-                      return (
+                        return (
                         <div
                           key={pos.id}
                           className="grid grid-cols-[minmax(0,2.4fr)_140px_120px_140px_150px_100px] items-center gap-4 px-6 py-4 transition hover:bg-white/[0.02]"
@@ -233,15 +370,15 @@ export function DefiOperations({
                           {/* Position Value */}
                           <div>
                             <p className="text-sm font-semibold text-white">
-                              {pos.amount.toFixed(2)} {pos.asset}
+                              {(Number(pos.amount) || 0).toFixed(2)} {pos.asset}
                             </p>
-                            <p className="text-xs text-[#9CA3AF]">${posValUsd.toFixed(2)}</p>
+                            <p className="text-xs text-[#9CA3AF]">${(Number(posValUsd) || 0).toFixed(2)}</p>
                           </div>
 
                           {/* Supply APY */}
                           <div>
                             <span className="text-sm font-bold text-[#16A34A]">
-                              {pos.apy.toFixed(2)}%
+                              {(Number(pos.apy) || 0).toFixed(2)}%
                             </span>
                           </div>
 
@@ -263,11 +400,12 @@ export function DefiOperations({
                             </span>
                           </div>
 
-                          {/* Action Button */}
-                          <div className="flex justify-end">
+                          {/* Action Buttons */}
+                          <div className="flex justify-end gap-2">
                             <button
                               onClick={() => {
-                                setDetailTab('overview')
+                                setSelectedPositionId(pos.id)
+                                setDetailTab('position')
                                 setSelectedPoolId(matchingPool.id)
                               }}
                               className="rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/[0.15]"
@@ -279,6 +417,13 @@ export function DefiOperations({
                         </div>
                       )
                     })}
+                    {displayPositions.length === 0 && (
+                      <div className="py-12 text-center text-sm text-[#9CA3AF]">
+                        {!publicKey
+                          ? 'Connect your wallet to view your active positions.'
+                          : 'No active positions found.'}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -366,7 +511,7 @@ export function DefiOperations({
 
               <div className="flex items-center gap-4">
                 <span className="text-xs text-[#9CA3AF]">
-                  Showing {filteredPools.length} of {stellarPools.length} vaults
+                  Showing {filteredPools.length} of {activePools.length} vaults
                 </span>
                 <div className="relative">
                   <input
@@ -579,7 +724,7 @@ export function PositionCard({
         <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/[0.06] pt-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">APY</p>
-            <p className="mt-1 text-sm font-semibold text-[#F2C12E]">{position.apy.toFixed(1)}%</p>
+            <p className="mt-1 text-sm font-semibold text-[#F2C12E]">{(Number(position.apy) || 0).toFixed(1)}%</p>
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#9CA3AF]">Duration</p>
@@ -662,12 +807,16 @@ export function PositionManageModal({
 
     try {
       setTxState('signing')
-      const result = await executeMockTestnetWithdraw({
-        amount: withdrawAmount,
-        asset: position.asset,
-        horizonUrl: networkUrl,
-        networkPassphrase,
+      const result = await executeApiPoolTransaction({
         publicKey,
+        signTransactionFn: signTransaction,
+        params: {
+          poolId: position.poolId || position.id,
+          action: 'WITHDRAW',
+          shareAmount: withdrawAmount,
+          slippageBps: 50,
+          userAddress: publicKey,
+        },
       })
       setTxState('submitted')
       setTxHash(result.hash)
@@ -962,7 +1111,7 @@ export function PoolCard({
           </div>
         )}
 
-        {expanded && <ReputationBreakdown reputation={pool.reputation} score={score} />}
+        {expanded && <ReputationBreakdown poolId={pool.id} reputation={pool.reputation} score={score} />}
 
         <div className="mt-4">
           <button
@@ -985,42 +1134,89 @@ export function PoolCard({
 // ─── Reputation Breakdown ─────────────────────────────────────────────────────
 
 function ReputationBreakdown({
+  poolId,
   reputation,
   score,
 }: {
+  hasActivePosition?: boolean
+  poolId?: string
   reputation: DeFiPool['reputation']
   score: number
 }) {
+  const [liveRisk, setLiveRisk] = useState<PoolRiskResponse | null>(null)
+
+  useEffect(() => {
+    if (!poolId) return
+    let cancelled = false
+    fetchPoolRisk(poolId)
+      .then((data) => {
+        if (!cancelled) setLiveRisk(data)
+      })
+      .catch(() => {
+        // Fallback silently if API is offline
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [poolId])
+
+  const displayScore = liveRisk ? liveRisk.compositeScore : score
+
   const rows = [
-    { label: 'Liquidity', value: reputation.liquidity, max: 40 },
-    { label: 'Protocol Age', value: reputation.age, max: 20 },
-    { label: 'Audit Status', value: reputation.audit, max: 20 },
-    { label: 'Activity', value: reputation.activity, max: 20 },
+    {
+      label: 'Liquidity / TVL Score',
+      value: liveRisk ? liveRisk.tvlScore : reputation.liquidity,
+      max: liveRisk ? 50 : 40,
+    },
+    {
+      label: 'Volatility Score',
+      value: liveRisk ? liveRisk.volatilityScore : reputation.age,
+      max: liveRisk ? 50 : 20,
+    },
+    {
+      label: 'APY / Audit Score',
+      value: liveRisk ? liveRisk.apyScore : reputation.audit,
+      max: liveRisk ? 50 : 20,
+    },
+    {
+      label: 'Activity',
+      value: reputation.activity,
+      max: 20,
+    },
   ]
 
   return (
-    <div className="mt-4 rounded-xl border border-white/[0.08] bg-[#161622] p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs uppercase tracking-[0.14em] text-[#9CA3AF]">Trust Score</p>
-        <p className="text-sm font-bold text-[#F0F0F0]">{score}/100</p>
-      </div>
-      <div className="space-y-2.5">
-        {rows.map((row) => (
-          <div key={row.label}>
-            <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="text-[#9CA3AF]">{row.label}</span>
-              <span className="font-medium text-[#F0F0F0]">
-                {row.value}/{row.max}
+    <div className="mt-4 space-y-4 rounded-xl border border-white/[0.08] bg-[#161622] p-4">
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <p className="text-xs uppercase tracking-[0.14em] text-[#9CA3AF]">Trust & Risk Score</p>
+            {liveRisk && (
+              <span className="rounded bg-[#F2C12E]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#F2C12E]">
+                LIVE API · {liveRisk.riskLevel}
               </span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-              <div
-                className="h-full rounded-full bg-[#16A34A] transition-all duration-300"
-                style={{ width: `${(row.value / row.max) * 100}%` }}
-              />
-            </div>
+            )}
           </div>
-        ))}
+          <p className="text-sm font-bold text-[#F0F0F0]">{displayScore}/100</p>
+        </div>
+        <div className="space-y-2.5">
+          {rows.map((row) => (
+            <div key={row.label}>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span className="text-[#9CA3AF]">{row.label}</span>
+                <span className="font-medium text-[#F0F0F0]">
+                  {row.value}/{row.max}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                <div
+                  className="h-full rounded-full bg-[#16A34A] transition-all duration-300"
+                  style={{ width: `${Math.min(100, (row.value / row.max) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -1037,7 +1233,7 @@ export function StakeTicket({
   onPositionAdded: (pos: Omit<LocalPosition, 'id'>) => void
   pool: DeFiPool
 }) {
-  const { networkPassphrase, networkUrl, publicKey, sorobanRpcUrl, status } = useWallet()
+  const { networkPassphrase, networkUrl, publicKey, status } = useWallet()
   const [amount, setAmount] = useState(0)
   const [txState, setTxState] = useState<'idle' | 'signing' | 'submitted' | 'error'>('idle')
   const [txMessage, setTxMessage] = useState<string | null>(null)
@@ -1073,31 +1269,19 @@ export function StakeTicket({
     try {
       setTxState('signing')
 
-      let result: { hash: string; status: string }
-
-      if (isLP && secondaryAsset && (secondaryAsset === 'XLM' || secondaryAsset === 'USDC') && sorobanRpcUrl) {
-        // Real Soroswap addLiquidity call
-        result = await executeSoroswapAddLiquidity({
+      const result = await executeApiPoolTransaction({
+        publicKey,
+        signTransactionFn: signTransaction,
+        params: {
+          poolId: pool.id,
+          action: 'DEPOSIT',
           amountA: amount,
-          amountB: secondaryAmount,
-          horizonUrl: networkUrl,
-          networkPassphrase,
-          publicKey,
-          sorobanRpcUrl,
-          tokenA: pool.asset,
-          tokenB: secondaryAsset,
-        })
-      } else {
-        // Lending pools or unsupported pairs → mock supply tx
-        result = await executeMockTestnetSupply({
-          amount,
-          asset: pool.asset,
-          horizonUrl: networkUrl,
-          networkPassphrase,
-          protocol: pool.protocol,
-          publicKey,
-        })
-      }
+          amountB: secondaryAmount || 0,
+          shareAmount: amount,
+          slippageBps: 50,
+          userAddress: publicKey,
+        },
+      })
 
       setTxState('submitted')
       setTxHash(result.hash)
@@ -1518,7 +1702,7 @@ export function BundleExecuteModal({
   onPositionAdded: (pos: Omit<LocalPosition, 'id'>) => void
   usdcBalance: number
 }) {
-  const { networkPassphrase, networkUrl, publicKey, sorobanRpcUrl, status } = useWallet()
+  const { networkPassphrase, networkUrl, publicKey, status } = useWallet()
   const [amount, setAmount] = useState(0)
   const [steps, setSteps] = useState<ExecStep[]>([])
   const [executing, setExecuting] = useState(false)
@@ -1556,31 +1740,19 @@ export function BundleExecuteModal({
       updateStep(i, { status: 'running' })
 
       try {
-        let result: { hash: string; status: string }
-
-        if (alloc.category === 'AMM LP' && sorobanRpcUrl) {
-          const secondaryAmt = estimateSecondaryAmount(alloc.asset, allocAmount)
-          const tokenB = alloc.asset === 'XLM' ? 'USDC' : 'XLM'
-          result = await executeSoroswapAddLiquidity({
+        const result = await executeApiPoolTransaction({
+          publicKey,
+          signTransactionFn: signTransaction,
+          params: {
+            poolId: alloc.poolId || `pool_${i}`,
+            action: 'DEPOSIT',
             amountA: allocAmount,
-            amountB: secondaryAmt,
-            horizonUrl: networkUrl,
-            networkPassphrase,
-            publicKey,
-            sorobanRpcUrl,
-            tokenA: alloc.asset,
-            tokenB,
-          })
-        } else {
-          result = await executeMockTestnetSupply({
-            amount: allocAmount,
-            asset: alloc.asset,
-            horizonUrl: networkUrl,
-            networkPassphrase,
-            protocol: bundle.name,
-            publicKey,
-          })
-        }
+            amountB: 0,
+            shareAmount: allocAmount,
+            slippageBps: 50,
+            userAddress: publicKey,
+          },
+        })
 
         updateStep(i, { status: 'done', hash: result.hash })
 

@@ -3,7 +3,7 @@ import { Asset, BASE_FEE, Horizon, Memo, Operation, TransactionBuilder } from '@
 
 type MockSupplyParams = {
   amount: number
-  asset: 'XLM' | 'USDC' | 'EURC'
+  asset: string
   horizonUrl: string
   networkPassphrase: string
   protocol: string

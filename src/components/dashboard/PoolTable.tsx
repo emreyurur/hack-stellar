@@ -8,7 +8,7 @@ type SortKey = 'apy' | 'tvl' | 'fee'
 type SortDir = 'asc' | 'desc'
 type FilterTab = 'all' | 'xlm' | 'stables'
 
-const STABLE_CODES = new Set(['USDC', 'EURC', 'MZAR', 'USDT', 'TUSD', 'DAI'])
+const STABLE_CODES = new Set(['USDC', 'EURC', 'MZAR', 'USDT', 'TUSD', 'DAI', 'USDW'])
 
 // ─── Token Avatar ─────────────────────────────────────────────────────────────
 
@@ -19,6 +19,9 @@ const TOKEN_COLORS: Record<string, string> = {
   BTC:  '#f59e0b',
   ETH:  '#8b5cf6',
   EURC: '#6366f1',
+  USDW: '#10b981',
+  AST1: '#ec4899',
+  AST2: '#8b5cf6',
 }
 
 function tokenBg(code: string): string {
@@ -35,7 +38,7 @@ function TokenAvatar({ code }: { code: string }) {
       className="flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ring-2 ring-[#111827]"
       style={{ backgroundColor: tokenBg(code) }}
     >
-      {code.slice(0, 3)}
+      {code.slice(0, 4)}
     </div>
   )
 }
@@ -324,7 +327,7 @@ export function PoolTable({
         <div className="px-5 py-10 text-center">
           <p className="text-sm font-semibold text-red-400">Could not load pools</p>
           <p className="mt-1 text-xs text-[#374151]">{poolsState.message}</p>
-          <p className="mt-1 text-xs text-[#374151]">Make sure the backend is running on localhost:3000</p>
+          <p className="mt-1 text-xs text-[#374151]">Make sure the backend API is reachable</p>
         </div>
       )}
 

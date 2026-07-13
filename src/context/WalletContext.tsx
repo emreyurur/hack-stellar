@@ -49,11 +49,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Map network passphrase to Horizon / Soroban RPC URLs
       const isTestnet = passphrase.toLowerCase().includes('test')
       const resolvedNetworkUrl = isTestnet
-        ? 'https://horizon-testnet.stellar.org'
-        : 'https://horizon.stellar.org'
+        ? import.meta.env.VITE_HORIZON_TESTNET_URL || 'https://horizon-testnet.stellar.org'
+        : import.meta.env.VITE_HORIZON_PUBLIC_URL || 'https://horizon.stellar.org'
       const resolvedSorobanUrl = isTestnet
-        ? 'https://soroban-testnet.stellar.org'
-        : 'https://soroban.stellar.org'
+        ? import.meta.env.VITE_SOROBAN_TESTNET_URL || 'https://soroban-testnet.stellar.org'
+        : import.meta.env.VITE_SOROBAN_PUBLIC_URL || 'https://soroban.stellar.org'
       const resolvedNetwork = isTestnet ? 'TESTNET' : 'PUBLIC'
 
       setPublicKey(address)

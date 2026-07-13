@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { API_BASE } from '../services/terminal8Api'
 
 export interface PoolRiskData {
   poolId: string
@@ -17,7 +18,7 @@ export type PoolRiskState =
   | { status: 'success'; data: PoolRiskData }
   | { status: 'error' }
 
-const BASE = 'http://localhost:3000/api/v1/pools'
+const BASE = `${API_BASE}api/v1/pools`
 
 export function usePoolRisk(poolId: string | null): PoolRiskState {
   const [state, setState] = useState<PoolRiskState>({ status: 'idle' })

@@ -39,6 +39,7 @@ export function useWalletBalances() {
   const [balances, setBalances] = useState<WalletBalance[]>([])
   const [balanceStatus, setBalanceStatus] = useState<BalanceState>('idle')
   const [balanceError, setBalanceError] = useState<string | null>(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
   const ready = status === 'CONNECTED' && Boolean(publicKey) && Boolean(networkUrl)
 
   useEffect(() => {
@@ -64,7 +65,27 @@ export function useWalletBalances() {
         }
 
         const account = (await response.json()) as HorizonAccountResponse
-        setBalances(account.balances.map(toWalletBalance))
+        const rawBalances = account.balances.map(toWalletBalance)
+        const sortedBalances = rawBalances.sort((a, b) => {
+          if (a.isNative) return -1
+          if (b.isNative) return 1
+          return Number(b.balance) - Number(a.balance)
+        })
+
+        const seenCodesWithBalance = new Set<string>()
+        const cleanBalances = sortedBalances.filter((item) => {
+          const balNum = Number(item.balance) || 0
+          if (balNum > 0) {
+            seenCodesWithBalance.add(item.code.toUpperCase())
+            return true
+          }
+          if (seenCodesWithBalance.has(item.code.toUpperCase())) {
+            return false
+          }
+          return true
+        })
+
+        setBalances(cleanBalances)
         setBalanceStatus('success')
       } catch (reason) {
         if (controller.signal.aborted) {
@@ -80,13 +101,14 @@ export function useWalletBalances() {
     void loadBalances()
 
     return () => controller.abort()
-  }, [networkUrl, publicKey, ready])
+  }, [networkUrl, publicKey, ready, refreshTrigger])
 
   return useMemo(
     () => ({
       balances: ready ? balances : [],
       balanceStatus: ready ? balanceStatus : 'idle',
       balanceError: ready ? balanceError : null,
+      refreshBalances: () => setRefreshTrigger((n) => n + 1),
     }),
     [balanceError, balanceStatus, balances, ready],
   )

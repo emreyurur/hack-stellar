@@ -10,7 +10,43 @@ export function reputationLabel(score: number): 'Trusted' | 'Moderate' | 'Risky'
   return 'Risky'
 }
 
+export const YRK_VAULT_POOL: DeFiPool = {
+  id: 'd26f6a1f9a4ef102a196925226e34d03842611fd7c84b31a5ceb49c304e62848',
+  protocol: 'Soroswap AMM',
+  category: 'AMM LP',
+  asset: 'YRK',
+  secondaryAsset: 'XLM',
+  apy: 24.5,
+  tvl: '$1.115B',
+  tvlRaw: 1_115_000_000,
+  volume24h: '$4.2M',
+  reputation: { liquidity: 36, age: 18, audit: 18, activity: 19 },
+  risk: 'Moderate',
+  method: 'addLiquidity()',
+  rationale: 'Provide liquidity to YRK / XLM Soroban vault and earn 24.5% APY with on-chain trust voting.',
+  contractId: 'd26f6a1f9a4ef102a196925226e34d03842611fd7c84b31a5ceb49c304e62848',
+}
+
+export const TERMINAL_VAULT_POOL: DeFiPool = {
+  id: 'badef3833c6c0765df43b3af3cfe0bb7b7919937143a234171cde7b8d72c4f45',
+  protocol: 'Soroswap AMM',
+  category: 'AMM LP',
+  asset: 'terminal',
+  secondaryAsset: 'XLM',
+  apy: 18.2,
+  tvl: '$485K',
+  tvlRaw: 485_000,
+  volume24h: '$120K',
+  reputation: { liquidity: 32, age: 15, audit: 18, activity: 16 },
+  risk: 'Moderate',
+  method: 'addLiquidity()',
+  rationale: 'Provide liquidity to terminal / XLM Soroban vault and earn yield with on-chain trust voting.',
+  contractId: 'badef3833c6c0765df43b3af3cfe0bb7b7919937143a234171cde7b8d72c4f45',
+}
+
 export const stellarPools: DeFiPool[] = [
+  YRK_VAULT_POOL,
+  TERMINAL_VAULT_POOL,
   {
     id: 'blend-usdc-lending',
     protocol: 'Blend Protocol',

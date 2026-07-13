@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import xlmLogo from '../../assets/xlm.svg'
 import usdcLogo from '../../assets/usdc.svg'
-import aquaLogo from '../../assets/aquaris.svg'
 import eightLogo from '../../assets/eight.svg'
 import { FeaturesSectionWithHoverEffects } from './FeaturesSectionWithHoverEffects'
 import { FAQSection } from './FAQSection'
@@ -176,10 +175,6 @@ export function LandingPage({ onLaunch, onOpenDocs }: LandingPageProps) {
           <div className="flex items-center gap-2 rounded-full border border-white/[0.14] bg-[#12121A] px-3.5 py-1.5">
             <img alt="USDC" className="size-4" src={usdcLogo} />
             <span className="font-mono text-xs font-bold text-white">USDC</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-white/[0.14] bg-[#12121A] px-3.5 py-1.5">
-            <img alt="AQUA" className="size-4" src={aquaLogo} />
-            <span className="font-mono text-xs font-bold text-white">AQUA</span>
           </div>
         </div>
       </WavyBackground>

@@ -8,6 +8,7 @@ export type LegacyFreighterApi = {
   getPublicKey?: () => Promise<string> | string
   requestAccess?: () => Promise<{ address?: string; publicKey?: string; error?: unknown }>
   isConnected?: () => Promise<boolean | { isConnected: boolean }> | boolean | { isConnected: boolean }
+  signTransaction?: (xdr: string, opts?: { networkPassphrase?: string }) => Promise<string>
 }
 
 export type StellarWallets = {
@@ -66,7 +67,7 @@ export type PoolReputation = {
 export type LocalPosition = {
   id: string
   amount: number
-  asset: 'XLM' | 'USDC' | 'EURC'
+  asset: string
   hash: string
   protocol: string
   status: string
@@ -81,7 +82,7 @@ export type DeFiPool = {
   id: string
   protocol: string
   category: 'Lending' | 'AMM LP' | 'AMM Rewards'
-  asset: 'XLM' | 'USDC' | 'EURC'
+  asset: string
   secondaryAsset?: string
   apy: number
   tvl: string
@@ -89,6 +90,8 @@ export type DeFiPool = {
   utilization?: number
   volume24h?: string
   feeBp?: number
+  reserveA?: number
+  reserveB?: number
   reputation: PoolReputation
   risk: RiskProfile
   method: 'supply()' | 'addLiquidity()'

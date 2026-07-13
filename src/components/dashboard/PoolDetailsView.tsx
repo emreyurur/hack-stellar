@@ -1,12 +1,14 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import xlmLogo from '../../assets/xlm.svg'
 import usdcLogo from '../../assets/usdc.svg'
 import aquaLogo from '../../assets/aquaris.svg'
 import { useWallet } from '../../context/useWallet'
 import { usePoolRisk } from '../../hooks/usePoolRisk'
-import { executeMockTestnetSupply } from '../../services/mockTestnetSupply'
-import { executeMockTestnetWithdraw } from '../../services/mockTestnetWithdraw'
-import { estimateSecondaryAmount, executeSoroswapAddLiquidity } from '../../services/soroswapLiquidity'
+import { usePoolDashboard } from '../../hooks/usePoolDashboard'
+import { executeApiPoolTransaction } from '../../services/terminal8Api'
+import { executeOnChainTrustVote } from '../../services/poolVotingContract'
+import { estimateSecondaryAmount } from '../../services/soroswapLiquidity'
+import { signTransaction } from '@stellar/freighter-api'
 import type { DeFiPool, LocalPosition } from '../../types/stellar'
 
 function getNowTimestamp(): number {
@@ -32,9 +34,10 @@ function tokenBg(code: string): string {
   return palette[h % palette.length]
 }
 
-function TokenAvatar({ code, size = 'md' }: { code: string; size?: 'sm' | 'md' | 'lg' }) {
+function TokenAvatar({ code = 'XLM', size = 'md' }: { code?: string; size?: 'sm' | 'md' | 'lg' }) {
   const dims = size === 'lg' ? 'size-9 ring-2' : size === 'sm' ? 'size-5 ring-1' : 'size-7 ring-2'
-  const upper = code.toUpperCase()
+  const safeCode = typeof code === 'string' && code ? code : 'XLM'
+  const upper = safeCode.toUpperCase()
   if (upper === 'XLM' || upper === 'YXLM') {
     return (
       <img
@@ -114,9 +117,12 @@ function PerformanceAreaChart({
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
 
-  const values = data.map((d) => (metric === 'apy' ? d.apy : d.tvl))
-  const minVal = Math.min(...values) * 0.94
-  const maxVal = Math.max(...values) * 1.05
+  const values = data.map((d) => {
+    const raw = metric === 'apy' ? Number(d.apy) : Number(d.tvl)
+    return Number.isFinite(raw) ? raw : 0
+  })
+  const minVal = (Math.min(...values) || 0) * 0.94
+  const maxVal = (Math.max(...values) || 10) * 1.05
   const range = Math.max(0.001, maxVal - minVal)
 
   const width = 640
@@ -241,8 +247,8 @@ function PerformanceAreaChart({
           <span className="text-[#9CA3AF]">{activePt.date}</span>
           <span className="font-mono font-bold text-white">
             {metric === 'apy'
-              ? `${activePt.val.toFixed(2)}% APY`
-              : `$${(activePt.val / 1_000_000).toFixed(2)}M`}
+              ? `${(Number.isFinite(Number(activePt.val)) ? Number(activePt.val) : 0).toFixed(2)}% APY`
+              : `$${((Number.isFinite(Number(activePt.val)) ? Number(activePt.val) : 0) / 1_000_000).toFixed(2)}M`}
           </span>
         </div>
       )}
@@ -257,6 +263,7 @@ export function PoolDetailsView({
   initialTab = 'overview',
   onBack,
   onPositionAdded,
+  onPositionRemoved,
   pool,
   userPositions = [],
 }: {
@@ -264,14 +271,22 @@ export function PoolDetailsView({
   initialTab?: 'overview' | 'position'
   onBack: () => void
   onPositionAdded: (pos: Omit<LocalPosition, 'id'>) => void
+  onPositionRemoved?: (id: string, amount: number) => void
   pool: DeFiPool
   userPositions?: LocalPosition[]
 }) {
-  const { connect, networkPassphrase, networkUrl, publicKey, sorobanRpcUrl, status } = useWallet()
+  const { connect, networkPassphrase, networkUrl, publicKey, status } = useWallet()
   const riskState = usePoolRisk(pool.id)
+  const dashboardState = usePoolDashboard(pool.id)
 
   // Page Navigation Tabs: 'overview' | 'position'
   const [activePageTab, setActivePageTab] = useState<'overview' | 'position'>(initialTab)
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setActivePageTab(initialTab)
+    })
+  }, [initialTab])
 
   // Chart Metric & Timeframe
   const [chartMetric, setChartMetric] = useState<'apy' | 'tvl'>('apy')
@@ -289,14 +304,25 @@ export function PoolDetailsView({
   const [withdrawTxHash, setWithdrawTxHash] = useState<string | null>(null)
   const [actionTab, setActionTab] = useState<'deposit' | 'withdraw'>('deposit')
 
+  // On-Chain Trust Score Voting State
+  const [upvotes, setUpvotes] = useState(24)
+  const [downvotes, setDownvotes] = useState(3)
+  const [userVote, setUserVote] = useState<'up' | 'down' | null>(null)
+  const [voteNotice, setVoteNotice] = useState<{
+    type: 'error' | 'success' | 'info'
+    text: string
+    hash?: string
+  } | null>(null)
+  const [voting, setVoting] = useState(false)
+
   const isTestnet = networkPassphrase?.toLowerCase().includes('test') ?? false
   const isConnected = status === 'CONNECTED' && Boolean(publicKey) && Boolean(networkUrl) && Boolean(networkPassphrase)
   const canSign = isConnected && isTestnet
 
   const isLP = pool.category === 'AMM LP' || pool.category === 'AMM Rewards'
-  const secondaryAsset = pool.secondaryAsset as 'XLM' | 'USDC' | undefined
-  const secondaryAmount = isLP && secondaryAsset && (secondaryAsset === 'XLM' || secondaryAsset === 'USDC')
-    ? estimateSecondaryAmount(pool.asset, amount)
+  const secondaryAsset = pool.secondaryAsset
+  const secondaryAmount = isLP && secondaryAsset
+    ? estimateSecondaryAmount(pool.asset, amount, secondaryAsset, pool.reserveA, pool.reserveB)
     : 0
 
   // Approximate USD value for deposit
@@ -304,20 +330,123 @@ export function PoolDetailsView({
   const tokenUsdPrice = poolAsset === 'USDC' || poolAsset === 'EURC' ? 1 : poolAsset === 'XLM' ? 0.12 : 1
   const usdValue = amount * tokenUsdPrice
 
-  const myPosition = userPositions.find((p) => p.poolId === pool.id || p.asset === pool.asset)
-  const suppliedAmount = myPosition ? myPosition.amount : 0
-  const suppliedUsdValue = suppliedAmount * tokenUsdPrice
-  const withdrawUsdValue = withdrawAmount * tokenUsdPrice
+  const safeApy = Number.isFinite(Number(pool.apy)) ? Number(pool.apy) : 5.0
 
-  // Calculated stats matching Kamino top strip
-  const totalSuppliedUsd = pool.tvl
-  const totalBorrowedUsd = pool.utilization ? `$${((pool.tvlRaw * (pool.utilization / 100)) / 1_000_000).toFixed(2)}M` : `$${(pool.tvlRaw * 0.88 / 1_000_000).toFixed(2)}M`
-  const utilizationPct = pool.utilization ?? 89.4
-  const supplyApy = pool.apy
-  const avgApy90d = (pool.apy * 0.84)
+  const myPosition = userPositions[0] || userPositions.find((p) => p.poolId === pool.id)
+  const rawAmount = Number(myPosition?.amount)
+  const suppliedAmount = Number.isFinite(rawAmount) ? rawAmount : 0
+  const suppliedUsdValue = Number.isFinite(suppliedAmount * tokenUsdPrice) ? suppliedAmount * tokenUsdPrice : 0
+  const withdrawUsdValue = Number.isFinite(withdrawAmount * tokenUsdPrice) ? withdrawAmount * tokenUsdPrice : 0
+  const elapsed = myPosition?.openedAt ? getNowTimestamp() - myPosition.openedAt : 0
+  const hours = elapsed / 3_600_000
+  const positionEarnedUsd = myPosition
+    ? suppliedUsdValue * (((Number(myPosition.apy) || safeApy)) / 100) * (hours / 8760)
+    : 0
+  const safeEarnedUsd = Number.isFinite(positionEarnedUsd) ? positionEarnedUsd : 0
+
+  const handleTrustVote = async (isUpvote: boolean) => {
+    setVoteNotice(null)
+    const hasActivePos = Boolean(myPosition) || suppliedAmount > 0
+    if (!hasActivePos) {
+      setVoteNotice({
+        type: 'error',
+        text: '⚠️ Soroban Contract Rule: Only users with an active open position in this vault can vote on its Trust Score.',
+      })
+      return
+    }
+
+    if (!publicKey || !networkUrl || !networkPassphrase) {
+      setVoteNotice({
+        type: 'error',
+        text: '⚠️ Please connect your Freighter wallet to sign the on-chain vote.',
+      })
+      return
+    }
+
+    if (userVote === (isUpvote ? 'up' : 'down')) {
+      return
+    }
+
+    try {
+      setVoting(true)
+      setVoteNotice({
+        type: 'info',
+        text: '⏳ Please approve the on-chain governance vote transaction in Freighter...',
+      })
+
+      const res = await executeOnChainTrustVote({
+        publicKey,
+        poolId: pool.id,
+        isUpvote,
+        horizonUrl: networkUrl,
+        networkPassphrase,
+      })
+
+      if (isUpvote) {
+        setUpvotes((prev) => prev + 1)
+        if (userVote === 'down') setDownvotes((prev) => Math.max(0, prev - 1))
+        setUserVote('up')
+      } else {
+        setDownvotes((prev) => prev + 1)
+        if (userVote === 'up') setUpvotes((prev) => Math.max(0, prev - 1))
+        setUserVote('down')
+      }
+
+      setVoteNotice({
+        type: 'success',
+        text: '✓ On-chain Trust Score vote recorded on Stellar Testnet!',
+        hash: res.hash,
+      })
+    } catch (err: unknown) {
+      setVoteNotice({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Vote transaction failed or cancelled.',
+      })
+    } finally {
+      setVoting(false)
+    }
+  }
+
+  // Safe numbers to prevent runtime crashes (black screen) when API pools miss properties
+  const safeTvlRaw = Number.isFinite(Number(pool.tvlRaw)) ? Number(pool.tvlRaw) : 100_000
+
+  const apiDashboard = dashboardState.status === 'success' ? dashboardState.data : undefined
+  const vaultOverview = apiDashboard?.vaultOverview
+
+  const utilizationPct = Number.isFinite(Number(vaultOverview?.utilization)) && Number(vaultOverview?.utilization) > 0
+    ? Number(vaultOverview?.utilization)
+    : Number.isFinite(Number(pool.utilization)) ? Number(pool.utilization) : 89.4
+
+  const rawSupplied = Number(vaultOverview?.totalSupplied)
+  const suppliedVal = Number.isFinite(rawSupplied) && rawSupplied > 0 ? rawSupplied : safeTvlRaw
+  const rawBorrowed = Number(vaultOverview?.totalBorrowed)
+  const borrowedVal = Number.isFinite(rawBorrowed) && rawBorrowed > 0 ? rawBorrowed : safeTvlRaw * (utilizationPct / 100)
+
+  const totalSuppliedUsd = pool.tvl || (suppliedVal >= 1_000_000
+    ? `$${(suppliedVal / 1_000_000).toFixed(2)}M`
+    : `$${suppliedVal.toFixed(0)}`)
+  const totalBorrowedUsd = borrowedVal >= 1_000_000
+    ? `$${(borrowedVal / 1_000_000).toFixed(2)}M`
+    : `$${borrowedVal.toFixed(0)}`
+  const rawSupplyApy = Number(vaultOverview?.supplyApy)
+  const supplyApy = Number.isFinite(rawSupplyApy) && rawSupplyApy > 0 ? rawSupplyApy : safeApy
+  const rawAvg90 = Number(vaultOverview?.supplyApy90dAvg)
+  const avgApy90d = Number.isFinite(rawAvg90) && rawAvg90 > 0 ? rawAvg90 : supplyApy * 0.84
 
   // Chart data
-  const chartData = useMemo(() => generateMockChartData(pool.apy, pool.tvlRaw, timeframe), [pool.apy, pool.tvlRaw, timeframe])
+  const chartData = useMemo(() => {
+    if (apiDashboard?.chartData && Array.isArray(apiDashboard.chartData) && apiDashboard.chartData.length >= 2) {
+      return apiDashboard.chartData.map((pt) => {
+        const d = new Date(pt.timestamp)
+        return {
+          date: isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          apy: Number.isFinite(Number(pt.supplyApy)) ? Number(pt.supplyApy) : supplyApy,
+          tvl: Number.isFinite(Number(pt.totalSupply)) ? Number(pt.totalSupply) : safeTvlRaw,
+        }
+      })
+    }
+    return generateMockChartData(supplyApy, safeTvlRaw, timeframe)
+  }, [apiDashboard, supplyApy, safeTvlRaw, timeframe])
 
   const handleDeposit = async () => {
     setTxMessage(null)
@@ -337,42 +466,32 @@ export function PoolDetailsView({
 
     try {
       setTxState('signing')
-      let result: { hash: string; status: string }
-
-      if (isLP && secondaryAsset && (secondaryAsset === 'XLM' || secondaryAsset === 'USDC') && sorobanRpcUrl) {
-        result = await executeSoroswapAddLiquidity({
+      const result = await executeApiPoolTransaction({
+        publicKey,
+        signTransactionFn: signTransaction,
+        params: {
+          poolId: pool.id,
+          action: 'DEPOSIT',
           amountA: amount,
-          amountB: secondaryAmount,
-          horizonUrl: networkUrl,
-          networkPassphrase,
-          publicKey,
-          sorobanRpcUrl,
-          tokenA: pool.asset,
-          tokenB: secondaryAsset,
-        })
-      } else {
-        result = await executeMockTestnetSupply({
-          amount,
-          asset: pool.asset,
-          horizonUrl: networkUrl,
-          networkPassphrase,
-          protocol: pool.protocol,
-          publicKey,
-        })
-      }
+          amountB: secondaryAmount || 0,
+          shareAmount: amount,
+          slippageBps: 50,
+          userAddress: publicKey,
+        },
+      })
 
       setTxState('submitted')
       setTxHash(result.hash)
       onPositionAdded({
-        amount,
-        asset: pool.asset,
-        hash: result.hash,
-        protocol: pool.protocol,
-        status: result.status,
+        amount: Number.isFinite(Number(amount)) ? Number(amount) : 0,
+        asset: pool.asset || 'XLM',
+        hash: result.hash || 'tx_hash',
+        protocol: pool.protocol || 'Soroswap AMM',
+        status: result.status || 'SUCCESS',
         timestamp: new Date().toLocaleTimeString(),
         openedAt: getNowTimestamp(),
-        apy: pool.apy,
-        category: pool.category,
+        apy: safeApy,
+        category: pool.category || 'AMM LP',
         poolId: pool.id,
       })
     } catch (error) {
@@ -385,15 +504,24 @@ export function PoolDetailsView({
     if (!isConnected || !publicKey || !networkUrl || !networkPassphrase || !isTestnet) return
     try {
       setWithdrawTxState('signing')
-      const result = await executeMockTestnetWithdraw({
-        amount: withdrawAmount || pos.amount,
-        asset: pos.asset,
-        horizonUrl: networkUrl,
-        networkPassphrase,
+      const result = await executeApiPoolTransaction({
         publicKey,
+        signTransactionFn: signTransaction,
+        params: {
+          poolId: pool.id,
+          action: 'WITHDRAW',
+          amountA: withdrawAmount || pos.amount,
+          amountB: 0,
+          shareAmount: withdrawAmount || pos.amount,
+          slippageBps: 50,
+          userAddress: publicKey,
+        },
       })
       setWithdrawTxState('submitted')
       setWithdrawTxHash(result.hash)
+      if (onPositionRemoved) {
+        onPositionRemoved(pos.id, withdrawAmount || pos.amount)
+      }
     } catch {
       setWithdrawTxState('error')
     }
@@ -518,22 +646,29 @@ export function PoolDetailsView({
           </div>
         </div>
       ) : (
-        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
             <p className="font-mono text-xl font-extrabold text-white sm:text-2xl">${suppliedUsdValue.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-[#9CA3AF]">Total Supplied</p>
+            <p className="mt-1 text-xs text-[#9CA3AF]">Position Value</p>
           </div>
           <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
-            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">${(suppliedUsdValue * 0.0015).toFixed(6)}</p>
+            <p className="font-mono text-xl font-extrabold text-white sm:text-2xl">
+              {suppliedAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+              <span className="ml-1 text-xs font-normal text-[#9CA3AF]">{pool.asset}</span>
+            </p>
+            <p className="mt-1 text-xs text-[#9CA3AF]">Staked Shares</p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
+            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">+${safeEarnedUsd.toFixed(4)}</p>
             <p className="mt-1 text-xs text-[#9CA3AF]">Interest Earned</p>
           </div>
           <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
-            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">${(suppliedUsdValue * (pool.apy / 100) / 365).toFixed(4)}</p>
+            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">+${(suppliedUsdValue * (safeApy / 100) / 365).toFixed(4)}</p>
             <p className="mt-1 text-xs text-[#9CA3AF]">Daily Interest</p>
           </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
-            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">{pool.apy.toFixed(2)}%</p>
-            <p className="mt-1 text-xs text-[#9CA3AF]">Supply APY</p>
+          <div className="col-span-2 sm:col-span-1 rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
+            <p className="font-mono text-xl font-extrabold text-[#F2C12E] sm:text-2xl">{safeApy.toFixed(2)}%</p>
+            <p className="mt-1 text-xs text-[#9CA3AF]">Current APY</p>
           </div>
         </div>
       )}
@@ -544,24 +679,76 @@ export function PoolDetailsView({
         <div className="space-y-6">
           {activePageTab === 'overview' ? (
             <>
-              {/* Strategy Overview Card */}
-              <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-6">
-                <h2 className="text-base font-bold text-white">Strategy Overview</h2>
-                <p className="mt-2 text-sm leading-relaxed text-[#9CA3AF]">
-                  {pool.protocol} {pool.asset} Prime is a conservative lending strategy designed to enable superior risk-adjusted yields via automated allocation into highly liquid Soroban money markets.
-                </p>
-                <div className="mt-4 flex flex-wrap items-center gap-2.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-[#181824] px-3 py-1 text-xs font-medium text-white">
-                    <span>⚖</span> Balanced
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-[#181824] px-3 py-1 text-xs font-medium text-white">
-                    <TokenAvatar code={pool.asset} size="sm" />
-                    <span>{pool.asset}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-[#181824] px-3 py-1 text-xs font-medium text-[#9CA3AF]">
-                    {pool.protocol} Protocol
-                  </span>
+              {/* On-Chain Trust Score & Voting Card */}
+              <div className="rounded-2xl border border-[#F2C12E]/30 bg-[#161622] p-6 shadow-lg">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-white">Trust Score & On-Chain Governance</h2>
+                      <span className="rounded-md bg-[#16A34A]/20 px-2.5 py-0.5 text-xs font-bold text-[#16A34A]">
+                        {riskState.status === 'success' ? `${riskState.data.compositeScore}/100 · ${riskState.data.riskLevel}` : '90/100 · TRUSTED'}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs text-[#9CA3AF]">
+                      Per the Soroban smart contract, only users with an active open position in this vault can vote on its Trust Score.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      disabled={voting}
+                      onClick={() => handleTrustVote(true)}
+                      className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition ${
+                        userVote === 'up'
+                          ? 'border-[#16A34A] bg-[#16A34A]/20 text-[#16A34A] shadow-[0_0_14px_rgba(22,163,74,0.3)]'
+                          : 'border-white/[0.12] bg-white/[0.06] text-[#F0F0F0] hover:border-[#16A34A]/40 hover:bg-[#16A34A]/10 hover:text-[#16A34A]'
+                      }`}
+                    >
+                      <span className="text-sm">👍</span>
+                      <span>Trusted ({upvotes})</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={voting}
+                      onClick={() => handleTrustVote(false)}
+                      className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition ${
+                        userVote === 'down'
+                          ? 'border-red-400 bg-red-400/20 text-red-400 shadow-[0_0_14px_rgba(248,113,113,0.3)]'
+                          : 'border-white/[0.12] bg-white/[0.06] text-[#F0F0F0] hover:border-red-400/40 hover:bg-red-400/10 hover:text-red-400'
+                      }`}
+                    >
+                      <span className="text-sm">👎</span>
+                      <span>Risky ({downvotes})</span>
+                    </button>
+                  </div>
                 </div>
+
+                {voteNotice && (
+                  <div
+                    className={`mt-4 rounded-xl border px-4 py-3 text-xs font-semibold ${
+                      voteNotice.type === 'error'
+                        ? 'border-red-400/30 bg-red-400/10 text-red-300'
+                        : voteNotice.type === 'info'
+                        ? 'border-blue-400/30 bg-blue-400/10 text-blue-300'
+                        : 'border-[#16A34A]/30 bg-[#16A34A]/10 text-[#16A34A]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{voteNotice.text}</span>
+                      {voteNotice.hash && (
+                        <a
+                          href={`https://stellar.expert/explorer/testnet/tx/${voteNotice.hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 underline hover:opacity-80"
+                        >
+                          View TX ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Performance History / APY Chart Card */}
@@ -656,7 +843,7 @@ export function PoolDetailsView({
               {suppliedAmount === 0 ? (
                 <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-12 text-center">
                   <p className="text-base font-semibold text-white">No active position in this vault</p>
-                  <p className="mt-1 text-sm text-[#9CA3AF]">Use the deposit panel on the right to start earning {pool.apy.toFixed(2)}% APY.</p>
+                  <p className="mt-1 text-sm text-[#9CA3AF]">Use the deposit panel on the right to start earning {safeApy.toFixed(2)}% APY.</p>
                   <button
                     onClick={() => setActionTab('deposit')}
                     className="mt-6 rounded-xl bg-[#F2C12E] px-6 py-3 text-xs font-bold uppercase tracking-wider text-[#0D0D12] transition hover:bg-[#e0b429]"
@@ -666,33 +853,34 @@ export function PoolDetailsView({
                   </button>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-6">
-                  <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
-                    <div className="flex items-center gap-6">
-                      <span className="border-b-2 border-[#3B82F6] pb-2 text-sm font-bold text-white">Position Value</span>
-                      <span className="pb-2 text-sm font-medium text-[#9CA3AF]">Interest Earned</span>
-                      <span className="pb-2 text-sm font-medium text-[#9CA3AF]">Avg APY</span>
+                <div className="space-y-6">
+                  {/* Performance Chart */}
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-6">
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
+                      <div className="flex items-center gap-6">
+                        <span className="border-b-2 border-[#3B82F6] pb-2 text-sm font-bold text-white">Position Value</span>
+                        <span className="pb-2 text-sm font-medium text-[#9CA3AF]">Interest Earned</span>
+                        <span className="pb-2 text-sm font-medium text-[#9CA3AF]">Avg APY</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-lg bg-[#3B82F6] px-2.5 py-1 text-xs font-bold text-white">USD</span>
+                        <span className="rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-[#9CA3AF]">7D</span>
+                        <span className="rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-[#9CA3AF]">30D</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-lg bg-[#3B82F6] px-2.5 py-1 text-xs font-bold text-white">USD</span>
-                      <span className="rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-[#9CA3AF]">SOL</span>
-                      <span className="rounded-lg bg-[#3B82F6] px-2.5 py-1 text-xs font-bold text-white">7D</span>
-                      <span className="rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-[#9CA3AF]">30D</span>
-                      <span className="rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-[#9CA3AF]">3M</span>
-                    </div>
-                  </div>
 
-                  <div className="h-64 w-full">
-                    <svg className="size-full overflow-visible" viewBox="0 0 500 180">
-                      <defs>
-                        <linearGradient id={`pos-gradient-${pool.id}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M 0,160 L 0,140 L 500,40 L 500,160 Z" fill={`url(#pos-gradient-${pool.id})`} />
-                      <path d="M 0,140 L 500,40" fill="none" stroke="#3B82F6" strokeWidth="2.5" />
-                    </svg>
+                    <div className="h-64 w-full">
+                      <svg className="size-full overflow-visible" viewBox="0 0 500 180">
+                        <defs>
+                          <linearGradient id={`pos-gradient-${pool.id}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.4" />
+                            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M 0,160 L 0,140 L 500,40 L 500,160 Z" fill={`url(#pos-gradient-${pool.id})`} />
+                        <path d="M 0,140 L 500,40" fill="none" stroke="#3B82F6" strokeWidth="2.5" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               )}
@@ -789,7 +977,7 @@ export function PoolDetailsView({
                 <div className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-xs text-[#9CA3AF]">
                   <span>+ Required secondary pair: </span>
                   <strong className="text-white">
-                    ~{secondaryAmount.toFixed(2)} {secondaryAsset}
+                    ~{secondaryAmount > 0 && secondaryAmount < 0.01 ? secondaryAmount.toFixed(4) : secondaryAmount.toFixed(2)} {secondaryAsset}
                   </strong>
                 </div>
               )}

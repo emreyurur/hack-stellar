@@ -17,7 +17,7 @@ const SOROSWAP_TESTNET = {
   tokens: {
     XLM:  'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
     USDC: 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU',
-  },
+  } as Record<string, string>,
 }
 
 const STROOPS = 10_000_000n
@@ -30,8 +30,8 @@ type AddLiquidityParams = {
   networkPassphrase: string
   publicKey: string
   sorobanRpcUrl: string
-  tokenA: 'XLM' | 'USDC' | 'EURC'
-  tokenB: 'XLM' | 'USDC' | 'EURC'
+  tokenA: string
+  tokenB: string
 }
 
 function toI128(amount: number) {
@@ -114,7 +114,19 @@ export async function executeSoroswapAddLiquidity({
 
 // Rough price ratio for testnet demo (XLM ≈ $0.12, USDC = $1)
 // In production this would be fetched from the pool reserves
-export function estimateSecondaryAmount(primaryAsset: 'XLM' | 'USDC' | 'EURC', primaryAmount: number): number {
-  if (primaryAsset === 'XLM') return primaryAmount * 0.12   // XLM → USDC
-  return primaryAmount / 0.12                                // USDC → XLM
+export function estimateSecondaryAmount(
+  primaryAsset: string,
+  primaryAmount: number,
+  secondaryAsset?: string,
+  reserveA?: number,
+  reserveB?: number
+): number {
+  if (reserveA && reserveB && reserveA > 0 && reserveB > 0) {
+    return primaryAmount * (reserveB / reserveA)
+  }
+  if (primaryAsset === 'XLM' && secondaryAsset === 'USDC') return primaryAmount * 0.12
+  if (primaryAsset === 'USDC' && secondaryAsset === 'XLM') return primaryAmount / 0.12
+  if (primaryAsset === 'XLM' && secondaryAsset === 'terminal') return primaryAmount * 10
+  if (primaryAsset === 'XLM' && secondaryAsset === 'yrk') return primaryAmount * 10
+  return primaryAmount
 }

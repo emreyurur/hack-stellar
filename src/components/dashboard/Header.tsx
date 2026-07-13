@@ -5,14 +5,15 @@ import { useWallet } from '../../context/useWallet'
 import type { WalletErrorType } from '../../context/WalletContext'
 
 type HeaderProps = {
-  activePage: 'landing' | 'home' | 'docs'
-  onPageChange: (page: 'landing' | 'home' | 'docs') => void
+  activePage: 'landing' | 'home' | 'docs' | 'tester'
+  onPageChange: (page: 'landing' | 'home' | 'docs' | 'tester') => void
   onToggleTerminal?: () => void
 }
 
-const NAV_LABELS: Record<'home' | 'docs', string> = {
+const NAV_LABELS: Record<'home' | 'docs' | 'tester', string> = {
   home: 'Home',
   docs: 'Docs',
+  tester: 'API Tester',
 }
 
 const ERROR_ICONS: Record<WalletErrorType, string> = {
@@ -225,7 +226,7 @@ export function Header({ activePage, onPageChange, onToggleTerminal }: HeaderPro
           id="navbar-sticky"
         >
           <ul className="mt-4 flex flex-col rounded-xl border border-white/[0.08] bg-[#12121A] p-4 font-medium md:mt-0 md:flex-row md:items-center md:space-x-8 md:border-0 md:bg-transparent md:p-0 rtl:space-x-reverse">
-            {(['home', 'docs'] as const).map((page) => (
+            {(['home', 'docs', 'tester'] as const).map((page) => (
               <li key={page}>
                 <button
                   aria-pressed={activePage === page}

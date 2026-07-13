@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DefiOperations } from './components/dashboard/DefiOperations'
 import { Header } from './components/dashboard/Header'
 import { RiskQuiz } from './components/dashboard/RiskQuiz'
+import { ApiTesterView } from './components/dashboard/ApiTesterView'
 import { DocsPage } from './components/docs/DocsPage'
 import { LandingPage } from './components/landing/LandingPage'
 import { BottomTerminal, CommandPalette } from './components/terminal/CommandPalette'
@@ -9,19 +10,49 @@ import type { CommandContext, TerminalLine } from './components/terminal/command
 import { WalletProvider } from './context/WalletContext'
 import { useWallet } from './context/useWallet'
 import { useWalletBalances } from './hooks/useWalletBalances'
-import { demoPositions } from './data/stellarMock'
-import type { LocalPosition, RiskProfile } from './types/stellar'
+import type { LocalPosition, RiskProfile, WalletBalance } from './types/stellar'
 
-export type AppPage = 'landing' | 'home' | 'docs'
+export type AppPage = 'landing' | 'home' | 'docs' | 'tester'
 
 const initialLines: TerminalLine[] = [
   { id: 'boot-1', kind: 'log', text: 'Soroban RPC ready. Type help for commands.' },
   { id: 'boot-2', kind: 'log', text: 'positions · withdraw <n> --full · pools · balance' },
 ]
 
+function getBestTokenBalance(balances: WalletBalance[], code: string): number {
+  const matching = balances.filter((b) => b.code.toUpperCase() === code.toUpperCase())
+  if (matching.length === 0) return 0
+  return matching.reduce((max, b) => Math.max(max, Number(b.balance) || 0), 0)
+}
+
+const STORAGE_KEY_PREFIX = 'terminal8_user_positions'
+
+function loadPositionsFromStorage(pubKey?: string | null): LocalPosition[] {
+  if (!pubKey) return [] // No wallet connected -> 0 positions!
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}_${pubKey}`)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch {
+    /* ignore storage read errors */
+  }
+  return [] // Empty default! NO MOCKS!
+}
+
+function savePositionsToStorage(positions: LocalPosition[], pubKey?: string | null) {
+  if (!pubKey) return
+  try {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}_${pubKey}`, JSON.stringify(positions))
+  } catch {
+    /* ignore storage write errors */
+  }
+}
+
 function AppInner() {
   const { networkPassphrase, networkUrl, publicKey, status } = useWallet()
-  const { balances } = useWalletBalances()
+  const { balances, refreshBalances } = useWalletBalances()
 
   const [activePage, setActivePage] = useState<AppPage>('landing')
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -29,7 +60,15 @@ function AppInner() {
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>(initialLines)
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>('Moderate')
   const [showQuiz, setShowQuiz] = useState(false)
-  const [localPositions, setLocalPositions] = useState<LocalPosition[]>(demoPositions)
+  const [localPositions, setLocalPositions] = useState<LocalPosition[]>(() =>
+    loadPositionsFromStorage(publicKey),
+  )
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setLocalPositions(loadPositionsFromStorage(publicKey))
+    })
+  }, [publicKey])
 
   useEffect(() => {
     let lastCtrlKTime = 0
@@ -56,21 +95,38 @@ function AppInner() {
     setTerminalOpen(true)
   }, [])
 
-  const handleWithdrawn = useCallback((id: string, withdrawnAmount: number) => {
+  const handleWithdrawn = useCallback((idOrPoolId: string, withdrawnAmount: number) => {
     setLocalPositions((current) => {
-      const pos = current.find((p) => p.id === id)
+      const pos = current.find((p) => p.id === idOrPoolId || p.poolId === idOrPoolId || p.asset === idOrPoolId)
       if (!pos) return current
-      if (withdrawnAmount >= pos.amount) return current.filter((p) => p.id !== id)
-      return current.map((p) => (p.id === id ? { ...p, amount: p.amount - withdrawnAmount } : p))
+      let next: LocalPosition[]
+      if (withdrawnAmount >= pos.amount || withdrawnAmount <= 0) {
+        next = current.filter((p) => p.id !== pos.id)
+      } else {
+        next = current.map((p) =>
+          p.id === pos.id ? { ...p, amount: Math.max(0, p.amount - withdrawnAmount) } : p,
+        )
+      }
+      savePositionsToStorage(next, publicKey)
+      return next
     })
-  }, [])
+    refreshBalances()
+  }, [publicKey, refreshBalances])
 
   const handlePositionAdded = useCallback((pos: Omit<LocalPosition, 'id'>) => {
-    setLocalPositions((current) => [{ ...pos, id: `${pos.hash}-${Date.now()}` }, ...current])
-  }, [])
+    setLocalPositions((current) => {
+      const next = [
+        { ...pos, id: `${pos.hash || pos.poolId}-${Date.now()}` },
+        ...current,
+      ]
+      savePositionsToStorage(next, publicKey)
+      return next
+    })
+    refreshBalances()
+  }, [publicKey, refreshBalances])
 
-  const xlmBalance = Number(balances.find((b) => b.code === 'XLM')?.balance ?? 0)
-  const usdcBalance = Number(balances.find((b) => b.code === 'USDC')?.balance ?? 0)
+  const xlmBalance = getBestTokenBalance(balances, 'XLM')
+  const usdcBalance = getBestTokenBalance(balances, 'USDC')
 
   const commandContext = useMemo<CommandContext>(
     () => ({
@@ -111,6 +167,7 @@ function AppInner() {
         {activePage === 'home' ? (
           <div className="space-y-6">
             <DefiOperations
+              balances={balances}
               onPositionAdded={handlePositionAdded}
               onRetakeQuiz={() => setShowQuiz(true)}
               onWithdrawn={handleWithdrawn}
@@ -120,6 +177,8 @@ function AppInner() {
               xlmBalance={xlmBalance}
             />
           </div>
+        ) : activePage === 'tester' ? (
+          <ApiTesterView />
         ) : (
           <DocsPage />
         )}
