@@ -11,11 +11,12 @@ async function bootstrap() {
   // Global Validation
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  // Swagger setup
   const config = new DocumentBuilder()
     .setTitle("Terminal8 API")
     .setDescription("Stellar Liquidity Pool Management System API")
     .setVersion("1.0")
+    .addServer("/stellar", "Live Server (Nginx Proxy)")
+    .addServer("/", "Localhost")
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
