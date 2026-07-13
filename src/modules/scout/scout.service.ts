@@ -337,7 +337,14 @@ export class ScoutService {
       const response = await server.submitTransaction(tx);
       this.logger.log(`Success! Hash: ${response.hash}`);
       
-      return { success: true, hash: response.hash };
+      const poolId = getLiquidityPoolId('constant_product', { assetA: nativeToken, assetB: customToken, fee: 30 }).toString('hex');
+
+      return { 
+        success: true, 
+        hash: response.hash,
+        poolId: poolId,
+        tokenCode: params.tokenCode
+      };
       
     } catch (error) {
       const errorMsg = error.response ? JSON.stringify(error.response.data.extras.result_codes) : error.message;
