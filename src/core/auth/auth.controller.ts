@@ -11,7 +11,7 @@ import { ConfigType } from "@nestjs/config";
 import { AuthService } from "./auth.service";
 import { appConfig } from "../../config/app.config";
 
-@Controller("api/v1/auth")
+@Controller("auth")
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
