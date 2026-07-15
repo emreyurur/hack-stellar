@@ -2,8 +2,7 @@ import { Controller, Post, Body, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TestnetToolsService } from './testnet-tools.service';
 import { BuildLpTxDto } from './dto/build-lp-tx.dto';
-import { MintTokenDto } from './dto/mint-token.dto';
-import { BuildTrustTxDto } from './dto/build-trust-tx.dto';
+import { BuildTrustMintTxDto } from './dto/build-trust-mint-tx.dto';
 import { SubmitMintTxDto } from './dto/submit-mint-tx.dto';
 
 @ApiTags('testnet-tools')
@@ -27,32 +26,16 @@ export class TestnetToolsController {
     }
   }
 
-  @Post('build-mint-tx')
+  @Post('build-trust-mint-tx')
   @ApiOperation({ 
-    summary: 'Build a transaction to mint a token', 
-    description: 'Generates an XDR for minting (Payment operation) a token to a destination. \n\nIf the `issuerPublicKey` is omitted, the system will use the default backend testnet issuer and partially sign the transaction. If you provide a custom `issuerPublicKey`, the transaction is returned unsigned and must be signed by the issuer on the frontend.'
+    summary: 'Build a transaction to trust and mint a token', 
+    description: 'Generates an XDR containing both a ChangeTrust operation and a Payment (mint) operation to the user. \n\nThe system uses the default backend testnet issuer and partially signs the transaction for the mint operation. The returned XDR must be signed by the user on the frontend.'
   })
   @ApiResponse({ status: 201, description: 'Returns base64 encoded XDR for frontend signing' })
   @ApiResponse({ status: 400, description: 'Bad Request / Failed to Build' })
-  async buildMintTx(@Body() dto: MintTokenDto) {
+  async buildTrustMintTx(@Body() dto: BuildTrustMintTxDto) {
     try {
-      const result = await this.testnetToolsService.buildMintTransaction(dto);
-      return result;
-    } catch (error) {
-      throw new NotFoundException(error.message);
-    }
-  }
-
-  @Post('build-trust-tx')
-  @ApiOperation({ 
-    summary: 'Build a transaction to establish a trustline',
-    description: 'Generates an XDR containing a ChangeTrust operation for the user. \n\nThe frontend must prompt the user to sign this XDR with their Freighter wallet and then submit it to the network.'
-  })
-  @ApiResponse({ status: 201, description: 'Returns base64 encoded XDR for frontend signing' })
-  @ApiResponse({ status: 400, description: 'Bad Request / Failed to Build' })
-  async buildTrustTx(@Body() dto: BuildTrustTxDto) {
-    try {
-      const result = await this.testnetToolsService.buildTrustTransaction(dto);
+      const result = await this.testnetToolsService.buildTrustAndMintTransaction(dto);
       return result;
     } catch (error) {
       throw new NotFoundException(error.message);

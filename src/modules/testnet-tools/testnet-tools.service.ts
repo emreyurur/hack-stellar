@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Asset, Keypair, Operation, TransactionBuilder, Networks, LiquidityPoolAsset, Horizon, getLiquidityPoolId } from '@stellar/stellar-sdk';
 import { BuildLpTxDto } from './dto/build-lp-tx.dto';
-import { MintTokenDto } from './dto/mint-token.dto';
-import { BuildTrustTxDto } from './dto/build-trust-tx.dto';
+import { BuildTrustMintTxDto } from './dto/build-trust-mint-tx.dto';
 import { HistoryService } from '../history/history.service';
 import { TransactionType } from '../history/entities/transaction-history.entity';
 
@@ -138,85 +137,18 @@ export class TestnetToolsService {
     }
   }
 
-  async buildMintTransaction(params: MintTokenDto) {
-    this.logger.log(`Building Mint transaction for token ${params.tokenCode}...`);
+  async buildTrustAndMintTransaction(params: BuildTrustMintTxDto) {
+    this.logger.log(`Building Trust+Mint transaction for token ${params.tokenCode}...`);
 
-    let issuerPub = params.issuerPublicKey;
-    let issuerSecretKeys: Keypair | undefined;
-
-    // If issuer is not provided, use the backend default issuer
-    if (!issuerPub) {
-      const issuerSecretStr = process.env.TESTNET_ISSUER_SECRET;
-      if (!issuerSecretStr) throw new Error('TESTNET_ISSUER_SECRET is required in .env');
-      issuerSecretKeys = Keypair.fromSecret(issuerSecretStr);
-      issuerPub = issuerSecretKeys.publicKey();
-    }
+    const issuerSecretStr = process.env.TESTNET_ISSUER_SECRET;
+    if (!issuerSecretStr) throw new Error('TESTNET_ISSUER_SECRET is required in .env');
+    const issuerSecretKeys = Keypair.fromSecret(issuerSecretStr);
+    const issuerPub = issuerSecretKeys.publicKey();
 
     const server = new Horizon.Server('https://horizon-testnet.stellar.org');
     
     try {
-      this.logger.log(`Loading issuer account (${issuerPub}) from Horizon...`);
-      const issuerAccount = await server.loadAccount(issuerPub);
-      const token = new Asset(params.tokenCode, issuerPub);
-
-      const txBuilder = new TransactionBuilder(issuerAccount, {
-        fee: '10000',
-        networkPassphrase: Networks.TESTNET,
-      });
-
-      txBuilder.addOperation(
-        Operation.payment({
-          source: issuerPub,
-          destination: params.destination,
-          asset: token,
-          amount: params.amount,
-        })
-      );
-
-      const tx = txBuilder.setTimeout(180).build();
-
-      if (issuerSecretKeys) {
-        this.logger.log('Signing transaction with backend issuer key...');
-        tx.sign(issuerSecretKeys);
-      }
-
-      return {
-        success: true,
-        xdr: tx.toXDR(),
-        tokenCode: params.tokenCode,
-        amount: params.amount,
-        destination: params.destination,
-        issuerPublicKey: issuerPub,
-        requiresFrontendSignature: !issuerSecretKeys
-      };
-    } catch (error) {
-      let errorMsg = error.message;
-      if (error.response?.data) {
-        if (error.response.data.extras?.result_codes) {
-          errorMsg = JSON.stringify(error.response.data.extras.result_codes);
-        } else {
-          errorMsg = JSON.stringify(error.response.data);
-        }
-      }
-      this.logger.error(`Error in buildMintTransaction: ${errorMsg}`);
-      throw new Error(`Failed to build transaction: ${errorMsg}`);
-    }
-  }
-
-  async buildTrustTransaction(params: BuildTrustTxDto) {
-    this.logger.log(`Building trust transaction for user ${params.userPublicKey}...`);
-
-    let issuerPub = params.issuerPublicKey;
-    if (!issuerPub) {
-      const issuerSecretStr = process.env.TESTNET_ISSUER_SECRET;
-      if (!issuerSecretStr) throw new Error('TESTNET_ISSUER_SECRET is required in .env');
-      const issuerSecretKeys = Keypair.fromSecret(issuerSecretStr);
-      issuerPub = issuerSecretKeys.publicKey();
-    }
-
-    const server = new Horizon.Server('https://horizon-testnet.stellar.org');
-    
-    try {
+      this.logger.log(`Loading user account (${params.userPublicKey}) from Horizon...`);
       const userAccount = await server.loadAccount(params.userPublicKey);
       const token = new Asset(params.tokenCode, issuerPub);
 
@@ -225,6 +157,7 @@ export class TestnetToolsService {
         networkPassphrase: Networks.TESTNET,
       });
 
+      // 1. Trustline operation
       txBuilder.addOperation(
         Operation.changeTrust({
           asset: token,
@@ -232,25 +165,38 @@ export class TestnetToolsService {
         })
       );
 
+      // 2. Mint operation (Payment)
+      txBuilder.addOperation(
+        Operation.payment({
+          source: issuerPub,
+          destination: params.userPublicKey,
+          asset: token,
+          amount: params.amount,
+        })
+      );
+
       const tx = txBuilder.setTimeout(180).build();
+
+      this.logger.log('Signing transaction with backend issuer key...');
+      tx.sign(issuerSecretKeys);
 
       return {
         success: true,
         xdr: tx.toXDR(),
         tokenCode: params.tokenCode,
+        amount: params.amount,
+        destination: params.userPublicKey,
         issuerPublicKey: issuerPub,
-        userPublicKey: params.userPublicKey
+        requiresFrontendSignature: true // Always requires user signature (they are the tx source)
       };
     } catch (error) {
       let errorMsg = error.message;
-      if (error.response?.data) {
-        if (error.response.data.extras?.result_codes) {
-          errorMsg = JSON.stringify(error.response.data.extras.result_codes);
-        } else {
-          errorMsg = JSON.stringify(error.response.data);
-        }
+      if (error.response?.data?.extras?.result_codes) {
+        errorMsg = JSON.stringify(error.response.data.extras.result_codes);
+      } else if (error.response?.data) {
+        errorMsg = JSON.stringify(error.response.data);
       }
-      this.logger.error(`Error in buildTrustTransaction: ${errorMsg}`);
+      this.logger.error(`Error in buildTrustAndMintTransaction: ${errorMsg}`);
       throw new Error(`Failed to build transaction: ${errorMsg}`);
     }
   }
