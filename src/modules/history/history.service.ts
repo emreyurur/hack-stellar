@@ -83,11 +83,11 @@ export class HistoryService {
     const poolsToSyncResult = await this.dataSource.query(`
       SELECT id FROM (
         SELECT id FROM liquidity_pools ORDER BY "totalTrustlines" DESC LIMIT 50
-        UNION
-        SELECT "poolId" as id FROM user_positions
-        UNION
-        SELECT "poolId" as id FROM transaction_history WHERE "poolId" IS NOT NULL
-      ) as combined
+      ) as top_pools
+      UNION
+      SELECT "poolId" as id FROM user_positions
+      UNION
+      SELECT "poolId" as id FROM transaction_history WHERE "poolId" IS NOT NULL
     `);
 
     const targetPoolIds: string[] = poolsToSyncResult.map((p: any) => p.id);
