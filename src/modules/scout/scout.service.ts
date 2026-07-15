@@ -21,7 +21,7 @@ export class ScoutService {
     private readonly horizonClient: HorizonClient,
     private readonly redisService: RedisService,
     private readonly pricingService: PricingService,
-  ) {}
+  ) { }
 
   async syncLiquidityPools() {
     this.logger.log("Starting liquidity pools sync...");
@@ -180,10 +180,10 @@ export class ScoutService {
 
   async getRecommendedPools(pubkey: string, page: number = 1, limit: number = 50) {
     const skip = (page - 1) * limit;
-    
+
     // 1. Fetch user's account from Horizon to get their balances
     const account = await this.horizonClient.fetchAccount(pubkey);
-    
+
     // If account doesn't exist on network, return default sort
     if (!account || !account.balances || account.balances.length === 0) {
       return this.getPools(page, limit);
@@ -204,22 +204,22 @@ export class ScoutService {
     if (userAssets.length > 0) {
       queryBuilder.addSelect(
         `(
-          CASE WHEN CONCAT(pool.assetACode, ':', COALESCE(pool.assetAIssuer, 'null')) IN (:...userAssets) THEN 1 ELSE 0 END
+          CASE WHEN CONCAT("pool"."assetACode", ':', COALESCE("pool"."assetAIssuer", 'null')) IN (:...userAssets) THEN 1 ELSE 0 END
           +
-          CASE WHEN CONCAT(pool.assetBCode, ':', COALESCE(pool.assetBIssuer, 'null')) IN (:...userAssets) THEN 1 ELSE 0 END
+          CASE WHEN CONCAT("pool"."assetBCode", ':', COALESCE("pool"."assetBIssuer", 'null')) IN (:...userAssets) THEN 1 ELSE 0 END
         )`,
         'matchScore'
       )
-      .setParameter('userAssets', userAssets)
-      .orderBy('matchScore', 'DESC')
-      .addOrderBy('pool.totalTrustlines', 'DESC');
+        .setParameter('userAssets', userAssets)
+        .orderBy('"matchScore"', 'DESC')
+        .addOrderBy('pool.totalTrustlines', 'DESC');
     } else {
       queryBuilder.orderBy('pool.totalTrustlines', 'DESC');
     }
 
     // 4. Paginate
     queryBuilder.skip(skip).take(limit);
-    
+
     // getManyAndCount will run the query and return entities (the virtual matchScore column won't be mapped to entity, which is fine)
     const [data, total] = await queryBuilder.getManyAndCount();
 
