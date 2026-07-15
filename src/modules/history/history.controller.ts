@@ -24,6 +24,12 @@ export class HistoryController {
     return this.historyService.getUserHistory(publicKey, limit || 50, page || 1);
   }
 
+  @Get('sync-now')
+  async forceSync() {
+    await this.historyService.syncTransactions();
+    return { success: true, message: 'Sync completed' };
+  }
+
   @Get(':poolId')
   @ApiOperation({ summary: 'Get transaction history filtered by a specific pool' })
   @ApiResponse({ status: 200, description: 'Paginated pool history list' })
