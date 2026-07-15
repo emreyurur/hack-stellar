@@ -187,7 +187,7 @@ function AppInner() {
                 </div>
               </div>
               <button
-                onClick={() => setActivePage('token-studio')}
+                onClick={() => setActivePage('studio')}
                 type="button"
                 className="shrink-0 rounded-xl bg-[#F2C12E] px-4 py-2 font-mono text-xs font-bold text-[#0D0D12] transition hover:bg-[#e0b429]"
               >
