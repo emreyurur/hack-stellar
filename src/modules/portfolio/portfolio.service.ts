@@ -114,9 +114,11 @@ export class PortfolioService {
             const newPos = this.positionRepository.create({
               userPublicKey: publicKey,
               poolId: onChain.liquidity_pool_id!,
-              sharesOwned: onChain.balance,
-              assetADeposited: costBasis.assetADeposited,
-              assetBDeposited: costBasis.assetBDeposited,
+              sharesOwned: onChain.balance || "0",
+              assetADeposited: costBasis.assetADeposited || "0",
+              assetBDeposited: costBasis.assetBDeposited || "0",
+              firstDepositAt: new Date(),
+              lastUpdatedAt: new Date(),
             });
             await this.positionRepository.save(newPos);
           }
@@ -144,22 +146,22 @@ export class PortfolioService {
       position = this.positionRepository.create({
         userPublicKey: publicKey,
         poolId,
-        sharesOwned: sharesAmount,
-        assetADeposited: assetAAmount,
-        assetBDeposited: assetBAmount,
+        sharesOwned: sharesAmount || "0",
+        assetADeposited: assetAAmount || "0",
+        assetBDeposited: assetBAmount || "0",
         firstDepositAt: new Date(),
         lastUpdatedAt: new Date(),
       });
     } else {
       // Eğer mevcutsa üzerine ekleniyor (basit logic, gerçekte average cost basis hesabı gerekir)
       position.sharesOwned = (
-        parseFloat(position.sharesOwned) + parseFloat(sharesAmount)
+        parseFloat(position.sharesOwned || "0") + parseFloat(sharesAmount || "0")
       ).toString();
       position.assetADeposited = (
-        parseFloat(position.assetADeposited) + parseFloat(assetAAmount)
+        parseFloat(position.assetADeposited || "0") + parseFloat(assetAAmount || "0")
       ).toString();
       position.assetBDeposited = (
-        parseFloat(position.assetBDeposited) + parseFloat(assetBAmount)
+        parseFloat(position.assetBDeposited || "0") + parseFloat(assetBAmount || "0")
       ).toString();
       position.lastUpdatedAt = new Date();
     }
