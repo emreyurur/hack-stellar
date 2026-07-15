@@ -1,8 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class BuildTrustTxDto {
-  @ApiProperty({ description: 'The public key of the user who wants to trust the token', example: 'G...' })
+  @ApiProperty({ description: 'The user public key who wants to trust the token', example: 'G...' })
   @IsNotEmpty()
   @IsString()
   userPublicKey: string;
@@ -11,4 +11,9 @@ export class BuildTrustTxDto {
   @IsNotEmpty()
   @IsString()
   tokenCode: string;
+
+  @ApiPropertyOptional({ description: 'Issuer public key (if trusting a custom token). Defaults to backend issuer if empty.', example: 'G...' })
+  @IsOptional()
+  @IsString()
+  issuerPublicKey?: string;
 }

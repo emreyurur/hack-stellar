@@ -16,4 +16,9 @@ export class MintTokenDto {
   @IsNotEmpty()
   @IsString()
   destination: string;
+
+  @ApiPropertyOptional({ description: 'Issuer public key (if minting your own token). Defaults to backend issuer if empty.', example: 'G...' })
+  @IsOptional()
+  @IsString()
+  issuerPublicKey?: string;
 }
