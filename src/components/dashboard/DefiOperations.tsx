@@ -112,10 +112,13 @@ function TokenAvatar({ code = 'XLM' }: { code?: string; size?: string }) {
 
   return (
     <div
-      className="flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ring-2 ring-[#0D0D12]"
+      className="flex size-7 shrink-0 items-center justify-center rounded-full text-white shadow-inner ring-2 ring-[#0D0D12]"
       style={{ backgroundColor: tokenBg(code) }}
+      title={code}
     >
-      {code.slice(0, 4)}
+      <svg className="size-3.5 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
     </div>
   )
 }
@@ -175,11 +178,11 @@ export function DefiOperations({
     return combined
   }, [publicKey, positions, portfolioState.state])
 
-  const poolsState = usePools()
+  const poolsState = usePools(publicKey)
   const activePools =
     poolsState.status === 'success' && poolsState.pools.length > 0
-      ? poolsState.pools.slice(0, 15)
-      : stellarPools.slice(0, 15)
+      ? poolsState.pools
+      : stellarPools.slice().sort((a, b) => (b.tvlRaw || 0) - (a.tvlRaw || 0)).slice(0, 15)
 
   const filteredPools = activePools.filter((pool) => {
     const pairStr = `${pool.asset} ${pool.secondaryAsset ?? ''} ${pool.protocol}`.toLowerCase()
@@ -329,9 +332,9 @@ export function DefiOperations({
 
               {/* Positions Table Container */}
               <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#111119]">
-                <div className="min-w-[760px]">
+                <div className="min-w-[1050px]">
                   {/* Table Header */}
-                  <div className="grid grid-cols-[minmax(0,2.4fr)_140px_120px_140px_150px_100px] items-center gap-4 border-b border-white/[0.08] px-6 py-3.5 text-xs font-semibold text-[#9CA3AF]">
+                  <div className="grid grid-cols-[minmax(220px,2fr)_240px_130px_170px_160px_110px] items-center gap-6 border-b border-white/[0.08] px-6 py-3.5 text-xs font-semibold text-[#9CA3AF]">
                     <span>Asset</span>
                     <span>Position Value</span>
                     <span>Supply APY</span>
@@ -351,48 +354,59 @@ export function DefiOperations({
                         const earned = pos.amount * (pos.apy / 100) * (hours / 8760)
                         const earnedUsd = earned * price
 
+                        const posPair = matchingPool.secondaryAsset
+                          ? `${matchingPool.asset}/${matchingPool.secondaryAsset}`
+                          : pos.asset === 'XLM'
+                          ? 'XLM/USDC'
+                          : `${pos.asset}/XLM`
+
                         return (
                         <div
                           key={pos.id}
-                          className="grid grid-cols-[minmax(0,2.4fr)_140px_120px_140px_150px_100px] items-center gap-4 px-6 py-4 transition hover:bg-white/[0.02]"
+                          className="grid grid-cols-[minmax(220px,2fr)_240px_130px_170px_160px_110px] items-center gap-6 px-6 py-4 transition hover:bg-white/[0.02]"
                         >
                           {/* Asset */}
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             <TokenAvatar code={pos.asset} size="md" />
-                            <div>
-                              <p className="text-sm font-bold text-white">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-white truncate">
                                 {matchingPool.protocol} {pos.asset}
                               </p>
-                              <p className="text-xs text-[#9CA3AF]">{matchingPool.protocol} Protocol</p>
+                              <p className="text-xs text-[#9CA3AF] truncate">{matchingPool.protocol} Protocol</p>
                             </div>
                           </div>
 
                           {/* Position Value */}
-                          <div>
-                            <p className="text-sm font-semibold text-white">
-                              {(Number(pos.amount) || 0).toFixed(2)} {pos.asset}
-                            </p>
-                            <p className="text-xs text-[#9CA3AF]">${(Number(posValUsd) || 0).toFixed(2)}</p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                              <p className="text-sm font-semibold text-white truncate">
+                                {(Number(pos.amount) || 0).toFixed(2)} {pos.asset}
+                              </p>
+                              <span className="shrink-0 rounded bg-white/[0.06] px-2 py-0.5 text-[11px] font-bold text-[#F2C12E] border border-white/[0.08]">
+                                {posPair}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-xs text-[#9CA3AF] whitespace-nowrap">${(Number(posValUsd) || 0).toFixed(2)}</p>
                           </div>
 
                           {/* Supply APY */}
-                          <div>
-                            <span className="text-sm font-bold text-[#16A34A]">
+                          <div className="min-w-0">
+                            <span className="text-sm font-bold text-[#16A34A] whitespace-nowrap">
                               {(Number(pos.apy) || 0).toFixed(2)}%
                             </span>
                           </div>
 
                           {/* Interest Earned */}
-                          <div>
-                            <p className="text-sm font-semibold text-[#16A34A]">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-[#16A34A] whitespace-nowrap truncate">
                               +{earned.toFixed(4)} {pos.asset}
                             </p>
-                            <p className="text-xs text-[#9CA3AF]">+${earnedUsd.toFixed(4)}</p>
+                            <p className="mt-0.5 text-xs text-[#9CA3AF] whitespace-nowrap">+${earnedUsd.toFixed(4)}</p>
                           </div>
 
                           {/* Vault Profile */}
-                          <div>
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.10] bg-white/[0.04] px-3 py-1 text-xs font-medium text-white">
+                          <div className="min-w-0">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.10] bg-white/[0.04] px-3 py-1 text-xs font-medium text-white whitespace-nowrap">
                               <svg className="size-4 shrink-0 text-[#22C55E]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                               </svg>
@@ -518,7 +532,7 @@ export function DefiOperations({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search Assets or Managers..."
+                    placeholder="Search Assets or Pools..."
                     className="w-60 rounded-xl border border-white/[0.08] bg-[#12121A] px-3.5 py-2 text-xs text-[#F0F0F0] placeholder-[#6B7280] outline-none transition focus:border-[#F2C12E]/50"
                   />
                 </div>

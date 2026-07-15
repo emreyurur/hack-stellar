@@ -20,9 +20,6 @@ export interface ApiPool {
   isActive: boolean
 }
 
-interface ApiResponse {
-  data: ApiPool[]
-}
 
 // ─── Mapping helpers ───────────────────────────────────────────────────────────
 
@@ -143,9 +140,8 @@ export type PoolsState =
   | { status: 'success'; pools: DeFiPool[] }
   | { status: 'error'; message: string }
 
-const API_URL = `${API_BASE}api/v1/pools?page=1&limit=15`
 
-export function usePools(): PoolsState {
+export function usePools(publicKey?: string | null): PoolsState {
   const [state, setState] = useState<PoolsState>({ status: 'loading' })
 
   useEffect(() => {
@@ -153,41 +149,45 @@ export function usePools(): PoolsState {
 
     async function fetchPools() {
       try {
-        const id1 = 'badef3833c6c0765df43b3af3cfe0bb7b7919937143a234171cde7b8d72c4f45'
-        const id2 = 'd26f6a1f9a4ef102a196925226e34d03842611fd7c84b31a5ceb49c304e62848'
+        const allPoolsUrl = `${API_BASE}api/v1/pools?page=1&limit=50`
+        const recommendedUrl = publicKey
+          ? `${API_BASE}api/v1/pools/recommended/${encodeURIComponent(publicKey)}?page=1&limit=15`
+          : null
 
-        const [listRes, p1Res, p2Res] = await Promise.allSettled([
-          fetch(API_URL, { headers: { accept: '*/*' } }),
-          fetch(`${API_BASE}api/v1/pools/${id1}`, { headers: { accept: '*/*' } }),
-          fetch(`${API_BASE}api/v1/pools/${id2}`, { headers: { accept: '*/*' } }),
+        const [listRes, recRes] = await Promise.allSettled([
+          fetch(allPoolsUrl, { headers: { accept: '*/*' } }),
+          recommendedUrl ? fetch(recommendedUrl, { headers: { accept: '*/*' } }) : Promise.reject('No public key'),
         ])
 
         if (listRes.status === 'rejected' || !listRes.value.ok) {
           throw new Error('API returned error')
         }
 
-        const json: ApiResponse = await listRes.value.json()
+        const json = await listRes.value.json()
+        const rawList: ApiPool[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : []
 
         if (!cancelled) {
-          const rawList = Array.isArray(json?.data) ? json.data : []
-
-          const topPools: ApiPool[] = []
-          if (p1Res.status === 'fulfilled' && p1Res.value.ok) {
-            const p1Json = await p1Res.value.json()
-            if (p1Json?.id) topPools.push(p1Json)
-          }
-          if (p2Res.status === 'fulfilled' && p2Res.value.ok) {
-            const p2Json = await p2Res.value.json()
-            if (p2Json?.id) topPools.push(p2Json)
+          const recPools: ApiPool[] = []
+          if (recRes.status === 'fulfilled' && recRes.value && recRes.value.ok) {
+            const recJson = await recRes.value.json()
+            const recList = Array.isArray(recJson?.data) ? recJson.data : Array.isArray(recJson) ? recJson : []
+            if (recList.length > 0) {
+              recPools.push(...recList.filter((p: ApiPool) => p.isActive !== false))
+            }
           }
 
-          const topIds = new Set(topPools.map((p) => p.id))
-          const restPools = rawList.filter((p) => !topIds.has(p.id))
+          const recIds = new Set(recPools.map((p) => p.id))
+          const restPools = rawList.filter((p) => !recIds.has(p.id) && p.isActive !== false)
 
-          const allRaw = [...topPools, ...restPools]
-          const pools = allRaw
-            .filter((p) => p.isActive !== false)
-            .map(mapApiPoolToDeFiPool)
+          restPools.sort((a, b) => {
+            const liqA = (Number(a.reserveA) || 0) + (Number(a.reserveB) || 0)
+            const liqB = (Number(b.reserveA) || 0) + (Number(b.reserveB) || 0)
+            return liqB - liqA
+          })
+          const top15Liquidity = restPools.slice(0, 15)
+
+          const allRaw = [...recPools, ...top15Liquidity]
+          const pools = allRaw.map(mapApiPoolToDeFiPool)
 
           setState({ status: 'success', pools })
         }
@@ -203,7 +203,7 @@ export function usePools(): PoolsState {
 
     fetchPools()
     return () => { cancelled = true }
-  }, [])
+  }, [publicKey])
 
   return state
 }

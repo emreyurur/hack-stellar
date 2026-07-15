@@ -4,262 +4,126 @@
 
 [![Live on Testnet](https://img.shields.io/badge/v0.3-Live%20on%20Testnet-4ade80?style=flat-square)](https://terminal8.xyz)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=flat-square)](https://github.com/terminal8/protocol/actions)
-[![Tests](https://img.shields.io/badge/Tests-Passing-4ade80?style=flat-square)](#testing)
 [![Stellar](https://img.shields.io/badge/Stellar-Soroban-C8A84B?style=flat-square)](https://stellar.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square)](https://react.dev)
 
 ---
 
-## Level 3 Submission — Production-Ready dApp
-
-### Advanced Smart Contracts
-
-Two Soroban contracts deployed and communicating with each other on Stellar Testnet:
-
-| Contract | Address | Role |
-|---|---|---|
-| **CounterContract** | `CAW6W5RJNLBBOQWVGPT4JALTU7P2M6KWQTWX44P4AHZZTLPE3XDTY43X` | On-chain counter — emits `counter/incr` events on every state change |
-| **PoolRouter** | *deploy in CI* | Inter-contract router — delegates `increment()` + `batch_increment()` calls to CounterContract and emits `route/incr` events |
-
-**Inter-contract communication:** `PoolRouterContract` calls `increment()` and `get()` on an external `CounterContract` via `env.invoke_contract()`, demonstrating real cross-contract invocation on Soroban.
-
-**Event streaming:** The counter emits on-chain events (`counter/incr`, `counter/reset`) on every state change. The frontend polls the Soroban RPC every 5 seconds and renders a live event feed in the ContractPanel.
-
-### CI/CD Pipeline
-
-GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push and PR:
-
-```
-contract-tests  → cargo test for counter + pool-router contracts
-frontend        → tsc --noEmit → eslint → vitest run → vite build
-```
-
-### Testing
-
-**Smart contract tests** (Rust / Soroban SDK):
-
-```bash
-cd contracts/counter && cargo test
-```
-
-5 passing tests across 2 contracts:
-- `test_counter` — increment, get, reset lifecycle
-- `test_route_increment_delegates_to_counter` — cross-contract increment
-- `test_read_counter_via_router` — cross-contract read
-- `test_route_emits_routing_event` — event emission verification
-- `test_batch_increment` — batch cross-contract calls
-- `test_multiple_routers_share_same_counter` — shared state across router instances
-
-**Frontend tests** (Vitest + Testing Library):
-
-```bash
-npm run test
-```
-
-Tests cover:
-- `ContractPanel` — renders contract address, disabled state when disconnected
-- `classifyWalletError` — wallet error type classification
-- `truncatePublicKey` / `formatCurrency` — utility formatting
-
-### Mobile Responsive UI
-
-The app uses a fully responsive Tailwind CSS layout — single-column on mobile, multi-column grid on desktop. All panels, buttons, and the CLI terminal adapt to any screen width.
-
-### Error Handling & Loading States
-
-| State | UI |
-|---|---|
-| Wallet pending | Pulsing amber dot + "Waiting for wallet signature…" |
-| TX success | Green dot + clickable hash link to Stellar Expert |
-| TX failed | Red dot + classified error message |
-| Live feed polling | Green pulsing dot + "polling every 5 s" indicator |
-| Disconnected | Amber warning card on contract action panel |
-
----
-
-## Level 2 Submission
-
-### Wallet Support
-Multi-wallet integration via **StellarWalletsKit** — supports Freighter, xBull, LOBSTR, and Albedo.
-A wallet selector modal opens on connect, allowing users to choose their preferred wallet.
-
-![Wallet options modal showing Freighter, xBull, LOBSTR, and Albedo](docs/wallet-options.png)
-
-### Deployed Contract (Testnet)
-
-**Terminal8 Counter** — a Soroban smart contract with `increment()`, `get()`, and `reset()` functions.
-
-| | |
-|---|---|
-| **Contract Address** | `CAW6W5RJNLBBOQWVGPT4JALTU7P2M6KWQTWX44P4AHZZTLPE3XDTY43X` |
-| **Deploy TX** | [`141e83905dfee9c191a3b22c7d761be3a99e99894ee27b4df5f61cd6e9d3784a`](https://stellar.expert/explorer/testnet/tx/141e83905dfee9c191a3b22c7d761be3a99e99894ee27b4df5f61cd6e9d3784a) |
-| **First `increment()` TX** | [`c981af52cf7e4f28a0e7934379d18e21490cedeb61e8a39c38330c87a382eb12`](https://stellar.expert/explorer/testnet/tx/c981af52cf7e4f28a0e7934379d18e21490cedeb61e8a39c38330c87a382eb12) |
-| **Explorer** | [View contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAW6W5RJNLBBOQWVGPT4JALTU7P2M6KWQTWX44P4AHZZTLPE3XDTY43X) |
-
-### Error Handling
-Three error types are explicitly classified and shown to the user:
-
-| Error | Trigger | UI message |
-|---|---|---|
-| **Wallet not found** | No wallet extension installed | "Wallet not found. Install Freighter, xBull, or LOBSTR to continue." |
-| **User rejected** | User closes/dismisses wallet modal | "Connection rejected. You closed the wallet dialog." |
-| **Insufficient balance** | Transaction submitted with too few funds | "Insufficient balance. Add funds to your wallet and try again." |
-
-### Transaction Status
-Every contract call shows live status: **pending → success / fail**, with a clickable transaction hash linking to Stellar Expert explorer.
-
----
-
 ## The Problem
 
-Stellar's DeFi ecosystem has **$300M+ in TVL** spread across Blend, Soroswap, and Aquarius — with no unified interface to manage it.
+Stellar's DeFi ecosystem has **$300M+ in TVL** spread across multiple decentralized protocols — with no unified interface to manage it.
 
-- Users need **3+ separate apps** to access lending, LP, and reward positions
-- **70%+ of wallets** hold idle dust trustlines earning 0%
-- There is **no trust signal** for pools — no reputation score, no audit visibility
+- Users need multiple separate applications to access lending, liquidity provisioning, and reward positions
+- Most wallets hold idle trustlines earning 0% yield
+- There is **no trust signal** for liquidity pools — no reputation score, no audit visibility
 - LP positions are complex and opaque for non-technical users
 
 ---
 
 ## What We Built
 
-Terminal8 is a composable DeFi routing and yield management protocol on Stellar Soroban.
+Terminal8 is a composable DeFi routing and yield management dashboard on Stellar Soroban.
 
 ### Core Features
 
-**⚡ Batch Swap Engine**
-Sweeps multiple dust trustlines into a single target asset (USDC or XLM) via Horizon's `PathPaymentStrictSend` in one fee-bumped transaction envelope.
+**⚡ Batch Swap Engine**  
+Sweeps multiple dust trustlines into a single target asset (USDC or XLM) via Horizon pathfinding in one fee-bumped transaction envelope.
 
-**🛡 Pool Reputation Scoring**
+**🛡 Pool Reputation & Trust Oracle**  
 Every pool is scored 0–100 across four axes:
-- **Liquidity** (40pts) — TVL depth and pool stability
+- **Liquidity Depth** (40pts) — TVL depth and pool stability
 - **Protocol Age** (20pts) — time since first deployment
-- **Audit Status** (20pts) — security review history
-- **Activity** (20pts) — 30-day trading volume rank
+- **Security Audit Status** (20pts) — security review history
+- **Activity & Volume** (20pts) — 30-day trading volume rank
 
-Trusted ≥75 · Moderate ≥50 · Risky <50
+**🎯 Risk Profiling Quiz**  
+3-question onboarding determines the user's risk profile (Conservative / Moderate / Aggressive) and personalizes all liquidity recommendations.
 
-**🎯 Risk Profiling Quiz**
-3-question onboarding determines the user's risk profile (Conservative / Moderate / Aggressive) and personalizes all pool recommendations.
+**📦 Yield Bundles**  
+One-click multi-pool allocation. "Balanced Bundle" splits funds smoothly into liquidity positions in a single flow — each with its own Freighter signature and real Soroban transaction.
 
-**📦 Yield Bundles**
-One-click multi-protocol allocation. "Balanced Bundle" splits funds 50% into Blend lending and 50% into Soroswap LP in a single flow — each with its own Freighter signature and real Soroban transaction.
+**📊 Position Management**  
+Open, track, and exit yield positions across top pools. Real-time estimated earnings and instant withdrawal via Freighter-signed transactions.
 
-**📊 Position Management**
-Open, track, and exit yield positions across Blend, Soroswap, and Aquarius. Real-time estimated earnings. Partial or full withdrawal via Freighter-signed transactions.
-
-**💻 Developer CLI Terminal**
-Power users manage everything through an in-app terminal:
-```
-$ positions              → list all open positions with APY and earned
-$ withdraw 1 --full      → close position (real Freighter tx)
-$ pools                  → all pools with trust scores
-$ pool blend             → Blend Protocol details
-$ balance                → live wallet balances
-$ whoami                 → connected address + network
-```
+**💻 Developer CLI Terminal**  
+Power users manage everything through an in-app terminal command suite (`positions`, `withdraw`, `pools`, `balance`, `whoami`).
 
 ---
 
-## Protocol Integrations
+## Technology Stack & Architecture
 
-| Protocol | Integration | Status |
-|---|---|---|
-| **Blend** | `PoolContractV2.submit()` — real Soroban supply on Testnet | ✅ Live |
-| **Soroswap** | Router `add_liquidity()` — Soroban contract call | ✅ Live |
-| **Aquarius** | AMM rewards pool display | 🔄 v0.2 |
-| **Horizon DEX** | `PathPaymentStrictSend` batch swap | ✅ Live |
-| **Freighter** | Full wallet integration (connect, sign, network detection) | ✅ Live |
+This section details the full-stack technologies, infrastructure tools, libraries, and architectural decisions used across both the Terminal8 Dashboard UI and the NestJS API. Each technology was selected to provide modern, scalable, and secure blockchain integration with high throughput and strict type safety.
 
----
+### Frontend & Client Layer (Dashboard UI)
 
-## Tech Stack
-
-```
-Frontend    React 19 · TypeScript · Tailwind CSS v4 · Vite
-Wallet      @stellar/freighter-api
-Blockchain  @stellar/stellar-sdk (Horizon + Soroban RPC)
-Protocols   @blend-capital/blend-sdk · Soroswap Router Contract
-Fonts       Syne (brand) · JetBrains Mono (terminal) · Funnel Display (UI)
-```
+- **React 19 & Vite (v6.0)**: Modern, highly performant component architecture utilizing React 19 concurrent rendering, hot module replacement, and ultra-fast production builds via Vite.
+- **TypeScript (v5.6+)**: Strictly typed UI layer guaranteeing exact shape alignment between client components, custom hooks, XDR payload generators, and backend API responses.
+- **Tailwind CSS (v3.4.17)**: Utility-first styling architecture delivering responsive layouts across mobile and desktop, rich glassmorphism (`backdrop-blur`), curated dark-mode aesthetics, and smooth micro-animations.
+- **Stellar Wallets Kit & Freighter API (`@creit.tech/stellar-wallets-kit` & `@stellar/freighter-api`)**: Seamless multi-wallet connection layer supporting **Freighter, xBull, LOBSTR, and Albedo**. Handles cryptographic account challenge verification (`signAuthEntry`), raw XDR transaction authorization (`signTransaction`), and active network detection.
+- **Data Visualization & Icons (`recharts` & `lucide-react`)**: Interactive historical APY curves and pool yield charts powered by Recharts alongside crisp, lightweight vector iconography across all interface panels.
+- **Interactive Terminal & State Management (`WalletContext`, `usePoolDashboard`)**: Custom modular hooks and an embedded interactive CLI terminal (`positions`, `withdraw`, `pools`, `balance`, `whoami`) enabling advanced users to execute live on-chain operations directly from a command prompt.
 
 ---
 
-## Architecture
+### Backend Layer (Terminal8 API & NestJS)
 
-```
-┌──────────────────────────────────────────────────────┐
-│                   Terminal8 Frontend                  │
-│                                                      │
-│  Risk Quiz → Pool Recommendations → Yield Bundles    │
-│  Position Manager → CLI Terminal → Portfolio View    │
-└──────────┬─────────────────┬────────────────────────┘
-           │                 │
-    ┌──────▼──────┐   ┌──────▼──────┐
-    │  Horizon    │   │  Soroban    │
-    │  REST API   │   │  RPC        │
-    │  (swaps,    │   │  (Blend,    │
-    │  balances)  │   │  Soroswap)  │
-    └─────────────┘   └─────────────┘
-```
+#### 1. Core Framework & Language
 
-**Routing Engine** — Finds optimal swap paths via Horizon strict-send pathfinding with slippage protection and XLM reserve buffering.
+- **Node.js (v20+) & V8 Engine**: Runs our asynchronous, non-blocking I/O server environment. Perfectly suited for handling intensive network requests to Stellar Horizon and Soroban RPC nodes without I/O bottlenecks.
+- **TypeScript (v5.1)**: Built entirely in strict TypeScript. Type safety is enforced across every layer from API DTOs down to database entities, avoiding `any` types and utilizing clean composition over complex inheritance.
+- **NestJS (v10.0)**: Our primary enterprise-grade architectural framework. Utilizes modular domain separation (e.g., `HistoryModule`, `TestnetToolsModule`), Dependency Injection (DI) for loosely coupled service providers, and strict Receive-Object/Return-Object (RO-RO) patterns.
 
-**Position Manager** — Tracks user supply positions with estimated yield accrual and full withdraw lifecycle.
+### 2. Blockchain & Stellar Integration
 
-**Reputation Oracle** — Scores pools deterministically; migrates to on-chain Soroban oracle in v0.2.
+- **`@stellar/stellar-sdk` (v12.3)**: Core library providing full integration with the Stellar network and Soroban engine.
+  - **XDR Envelope Construction**: Builds all smart contract operations (`TransactionBuilder`), liquidity pool (LP) deposits, trustlines, and token transfers on the backend. Transactions are transmitted to the frontend as XDR envelopes for Freighter wallet signing or partially signed with backend security keys.
+  - **Horizon API Requests**: Connects directly to Stellar Testnet and Mainnet Horizon instances for account validation, real-time balance queries, sequence tracking, and deterministic `poolId` resolution (`getLiquidityPoolId`).
+  - **Background Indexer**: Periodically scans the Horizon network for transaction history and synchronizes active user portfolio positions automatically.
 
----
+### 3. Database & ORM Layer
 
-## Getting Started
+- **PostgreSQL (v16 Alpine)**: Persistent relational database. Ensures strict ACID compliance when storing user transaction histories (`History`), profile metadata, and financial activity logs.
+- **TypeORM (v0.3.20)**: Robust Object-Relational Mapping layer. Tables are defined as strictly typed classes using `@Entity` and `@Column` decorators, keeping data access (`@InjectRepository`) completely isolated from core business logic.
 
-### Prerequisites
+### 4. Caching, Queues & Background Workers
 
-- Node.js 18+
-- [Freighter wallet](https://freighter.app) browser extension
-- Freighter configured to **Stellar Testnet**
+- **Redis (v7 Alpine) & ioredis (v5)**: High-speed in-memory data store. Used alongside `@nestjs/cache-manager` (`cache-manager-ioredis-yet` adapter) to cache repetitive Horizon queries and heavy computations.
+- **BullMQ (v5.7) & `@nestjs/bullmq`**: Redis-powered message and job queue. Offloads long-running indexing tasks and periodic CRON jobs to asynchronous worker processes equipped with automatic retry mechanisms.
 
-### Run Locally
+### 5. Security, Authentication & Validation
 
-```bash
-git clone https://github.com/terminal8/protocol
-cd protocol
-npm install
-npm run dev
-```
+- **JSON Web Token (JWT) & Passport.js**: Stateless authentication mechanism via `@nestjs/jwt` and `passport-jwt`. Custom route guards (`@UseGuards`) protect API endpoints after verifying wallet challenges.
+- **Class Validator & Class Transformer**: Acts as our primary request firewall. Incoming JSON payloads are intercepted and validated against strict decorators (`@IsString()`, `@IsNotEmpty()`, `@IsOptional()`), throwing immediate HTTP 400 Bad Request errors on malformed inputs.
+- **Joi (v17.13)**: Validates environment variables (`.env`) during application startup, preventing deployment if required database parameters or Horizon RPC URLs are missing or invalid.
 
-Open [http://localhost:5173](http://localhost:5173)
+### 6. API Documentation & DevOps Infrastructure
 
-### Demo Flow
-
-1. Click **Connect** → approve Freighter on Testnet
-2. Complete the **risk quiz** (3 questions)
-3. Browse pool cards with **trust scores** — click to expand breakdown
-4. Select a **Yield Bundle** → enter amount → watch step-by-step execution
-5. Open **positions** in the terminal: `$ positions`
-6. Withdraw via terminal: `$ withdraw 1 --full`
+- **Swagger (OpenAPI 3.0)**: Live, automated OpenAPI documentation (`@nestjs/swagger`) accessible directly at `/api/v1/docs` for immediate interactive request testing.
+- **Docker & Docker Compose**: Containerized multi-service architecture (`docker-compose up -d`) orchestrating our NestJS API, PostgreSQL database, and Redis server inside an isolated Docker network.
+- **Jest & Supertest**: Full test coverage ensuring unit test isolation for business services (`ts-jest`) and comprehensive end-to-end (E2E) HTTP scenario verification.
 
 ---
 
-## Roadmap
+## Soroban Smart Contract Reference
 
-| Version | Target | Highlights |
-|---|---|---|
-| **v0.1** | June 2026 ✅ | Wallet connect, batch swap, risk quiz, trust scoring, Blend + Soroswap integration, CLI terminal |
-| **v0.2** | Q3 2026 | Soroswap LP management, Aquarius auto-compound, live APY indexing, mainnet swap |
-| **v0.3** | Q4 2026 | `@terminal8/sdk` npm package, REST API, webhooks, CLI tool |
-| **v1.0** | Q1 2027 | Audited contracts, mainnet deployment, governance token (T8), DAO |
+Terminal8's on-chain pool trust scoring and community upvote/downvote scores are persisted directly on Stellar Soroban via our dedicated voting contract.
+
+| Property | Details |
+|---|---|
+| **Contract Name** | `PoolVotingContract` |
+| **Contract Address / ID** | `CDYRNT2EBC3KJPYMCN3K7YWEIH5LS355TRJ25HPIEZYMAKFXFLM3XMZN` |
+| **Network** | Stellar Testnet (`Test SDF Network ; September 2015`) |
+| **Stellar Explorer** | [↗ View Contract on Stellar Expert Explorer](https://stellar.expert/explorer/testnet/contract/CDYRNT2EBC3KJPYMCN3K7YWEIH5LS355TRJ25HPIEZYMAKFXFLM3XMZN) |
 
 ---
 
 ## Why Terminal8?
 
-The name reflects our philosophy: **terminal-first DeFi**. The interface gives retail users a clean visual layer while exposing the full power of Stellar's primitives to developers through a real CLI — like Bloomberg Terminal, but for Stellar DeFi.
+The name reflects our philosophy: **terminal-first DeFi**. The interface gives retail users a clean visual layer while exposing the full power of Stellar's primitives to developers through a real CLI terminal.
 
-No other product in the Stellar ecosystem offers:
-- Unified yield routing across Blend, Soroswap, and Aquarius
+- Unified yield routing across Stellar liquidity pools
 - Pool trust scoring with on-chain verifiable inputs
-- One-click multi-protocol bundles
+- One-click multi-pool allocation bundles
 - Developer CLI with real transaction execution
 
 ---

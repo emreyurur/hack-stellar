@@ -45,8 +45,6 @@ export const TERMINAL_VAULT_POOL: DeFiPool = {
 }
 
 export const stellarPools: DeFiPool[] = [
-  YRK_VAULT_POOL,
-  TERMINAL_VAULT_POOL,
   {
     id: 'blend-usdc-lending',
     protocol: 'Blend Protocol',
@@ -125,6 +123,8 @@ export const stellarPools: DeFiPool[] = [
     rationale: 'High-yield LP for users comfortable with impermanent loss and AQUA exposure.',
     contractId: 'CSRW...7XLP',
   },
+  YRK_VAULT_POOL,
+  TERMINAL_VAULT_POOL,
 ]
 
 export const demoPositions: LocalPosition[] = [

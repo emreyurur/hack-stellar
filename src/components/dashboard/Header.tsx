@@ -5,15 +5,15 @@ import { useWallet } from '../../context/useWallet'
 import type { WalletErrorType } from '../../context/WalletContext'
 
 type HeaderProps = {
-  activePage: 'landing' | 'home' | 'docs' | 'tester'
-  onPageChange: (page: 'landing' | 'home' | 'docs' | 'tester') => void
+  activePage: 'landing' | 'home' | 'studio' | 'docs' | 'tester'
+  onPageChange: (page: 'landing' | 'home' | 'studio' | 'docs' | 'tester') => void
   onToggleTerminal?: () => void
 }
 
-const NAV_LABELS: Record<'home' | 'docs' | 'tester', string> = {
+const NAV_LABELS: Record<'home' | 'studio' | 'docs', string> = {
   home: 'Home',
+  studio: 'Token Studio',
   docs: 'Docs',
-  tester: 'API Tester',
 }
 
 const ERROR_ICONS: Record<WalletErrorType, string> = {
@@ -25,9 +25,9 @@ const ERROR_ICONS: Record<WalletErrorType, string> = {
 
 const ERROR_LABELS: Record<WalletErrorType, string> = {
   wallet_not_found: 'Wallet not found',
-  user_rejected: 'Rejected by user',
+  user_rejected: 'User Cancelled',
   insufficient_balance: 'Insufficient balance',
-  unknown: 'Connection error',
+  unknown: 'Connection Error',
 }
 
 export function Header({ activePage, onPageChange, onToggleTerminal }: HeaderProps) {
@@ -226,7 +226,7 @@ export function Header({ activePage, onPageChange, onToggleTerminal }: HeaderPro
           id="navbar-sticky"
         >
           <ul className="mt-4 flex flex-col rounded-xl border border-white/[0.08] bg-[#12121A] p-4 font-medium md:mt-0 md:flex-row md:items-center md:space-x-8 md:border-0 md:bg-transparent md:p-0 rtl:space-x-reverse">
-            {(['home', 'docs', 'tester'] as const).map((page) => (
+            {(['home', 'studio', 'docs'] as const).map((page) => (
               <li key={page}>
                 <button
                   aria-pressed={activePage === page}

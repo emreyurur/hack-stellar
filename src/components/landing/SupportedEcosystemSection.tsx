@@ -2,6 +2,10 @@ import React from 'react'
 import xlmLogo from '../../assets/xlm.svg'
 import usdcLogo from '../../assets/usdc.svg'
 import aquaLogo from '../../assets/aquaris.svg'
+import freighterImg from '../../assets/freighter.jpg'
+import lobstrImg from '../../assets/lobstr.jpg'
+import xbullImg from '../../assets/xbull.jpg'
+import albedoImg from '../../assets/albedo.png'
 import { InfiniteSlider } from './InfiniteSlider'
 
 type EcosystemItem = {
@@ -13,59 +17,10 @@ type EcosystemItem = {
 }
 
 export function SupportedEcosystemSection() {
-  const freighterLogo = (
-    <svg className="size-8" viewBox="0 0 36 36" fill="none">
-      <circle cx="18" cy="18" r="18" fill="#1E1E2E" />
-      <path
-        d="M18 7L25 18L18 29L11 18L18 7Z"
-        fill="#8B5CF6"
-        stroke="#8B5CF6"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <circle cx="18" cy="18" r="3.5" fill="#F0F0F0" />
-    </svg>
-  )
-
-  const xbullLogo = (
-    <svg className="size-8" viewBox="0 0 36 36" fill="none">
-      <circle cx="18" cy="18" r="18" fill="#14211A" />
-      <path
-        d="M11 12C14 12 16 15 18 18C20 15 22 12 25 12M11 24C14 24 16 21 18 18C20 21 22 24 25 24"
-        stroke="#16A34A"
-        strokeWidth="2.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="18" cy="18" r="2.5" fill="#F2C12E" />
-    </svg>
-  )
-
-  const lobstrLogo = (
-    <svg className="size-8" viewBox="0 0 36 36" fill="none">
-      <circle cx="18" cy="18" r="18" fill="#141926" />
-      <path
-        d="M18 10C13.5 10 10 13.5 10 18C10 22.5 13.5 26 18 26C22.5 26 26 22.5 26 18C26 13.5 22.5 10 18 10Z"
-        stroke="#3B82F6"
-        strokeWidth="2"
-      />
-      <path d="M18 13V18L21.5 21.5" stroke="#60A5FA" strokeWidth="2.2" strokeLinecap="round" />
-      <circle cx="18" cy="18" r="2" fill="#60A5FA" />
-    </svg>
-  )
-
-  const albedoLogo = (
-    <svg className="size-8" viewBox="0 0 36 36" fill="none">
-      <circle cx="18" cy="18" r="18" fill="#221C14" />
-      <path
-        d="M18 9L20.8 15.2L27.5 16.2L22.6 21L23.8 27.7L18 24.6L12.2 27.7L13.4 21L8.5 16.2L15.2 15.2L18 9Z"
-        stroke="#F2C12E"
-        strokeWidth="1.8"
-        fill="rgba(242, 193, 46, 0.15)"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
+  const freighterLogo = <img alt="Freighter" className="size-8 rounded-full object-cover" src={freighterImg} />
+  const xbullLogo = <img alt="xBull" className="size-8 rounded-full object-cover" src={xbullImg} />
+  const lobstrLogo = <img alt="LOBSTR" className="size-8 rounded-full object-cover" src={lobstrImg} />
+  const albedoLogo = <img alt="Albedo" className="size-8 rounded-full object-cover" src={albedoImg} />
 
   const items: EcosystemItem[] = [
     {

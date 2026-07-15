@@ -422,3 +422,56 @@ export async function fetchUserPortfolio(publicKey: string): Promise<PortfolioPo
   return res.json()
 }
 
+export interface ApiHistoryItem {
+  id?: string
+  hash?: string
+  txHash?: string
+  type?: string
+  action?: string
+  poolId?: string
+  asset?: string
+  tokenCode?: string
+  tokens?: string
+  amount?: number | string
+  value?: number | string
+  usdValue?: number | string
+  timestamp?: string | number
+  createdAt?: string | number
+  date?: string
+  [key: string]: unknown
+}
+
+/**
+ * Fetches deposit and withdraw transaction history from /api/v1/history?limit=...&page=...
+ */
+export async function fetchTransactionHistory(
+  limit = 10,
+  page = 1,
+  token?: string | null,
+): Promise<ApiHistoryItem[]> {
+  const jwt = token ?? getStoredJwtToken()
+  const headers: Record<string, string> = {
+    accept: '*/*',
+  }
+  if (jwt) {
+    headers.Authorization = `Bearer ${jwt}`
+  }
+
+  try {
+    const url = `${API_BASE}api/v1/history?limit=${limit}&page=${page}`
+    const res = await fetch(url, { method: 'GET', headers })
+    if (!res.ok) {
+      return []
+    }
+    const json = await res.json()
+    if (Array.isArray(json)) return json
+    if (json.data && Array.isArray(json.data)) return json.data
+    if (json.items && Array.isArray(json.items)) return json.items
+    if (json.history && Array.isArray(json.history)) return json.history
+    if (json.transactions && Array.isArray(json.transactions)) return json.transactions
+    return []
+  } catch (err) {
+    console.debug('Failed to fetch history from API:', err)
+    return []
+  }
+}

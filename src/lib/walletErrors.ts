@@ -25,11 +25,15 @@ export function classifyWalletError(error: unknown): { type: WalletErrorType; me
     lower.includes('canceled') ||
     lower.includes('user closed') ||
     lower.includes('user denied') ||
-    lower.includes('modal closed')
+    lower.includes('modal closed') ||
+    lower.includes('connection error') ||
+    lower.includes('window closed') ||
+    lower.includes('closed by user') ||
+    lower === 'connection error'
   ) {
     return {
       type: 'user_rejected',
-      message: 'Connection rejected. You closed the wallet dialog.',
+      message: 'User cancelled connection. Wallet selection dialog or popup was closed.',
     }
   }
 

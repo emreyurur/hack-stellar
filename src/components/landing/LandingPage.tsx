@@ -66,7 +66,7 @@ export function LandingPage({ onLaunch, onOpenDocs }: LandingPageProps) {
               type="button"
             >
               <span>Launch App</span>
-              <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <svg className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={3.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
               </svg>
             </button>
@@ -103,11 +103,10 @@ export function LandingPage({ onLaunch, onOpenDocs }: LandingPageProps) {
                   <li key={key}>
                     <button
                       aria-current={isActive ? 'page' : undefined}
-                      className={`block w-full rounded-lg px-3 py-2 text-left text-sm tracking-wide transition md:p-0 ${
-                        isActive
+                      className={`block w-full rounded-lg px-3 py-2 text-left text-sm tracking-wide transition md:p-0 ${isActive
                           ? 'font-semibold text-[#F2C12E]'
                           : 'font-medium text-[#9CA3AF] hover:bg-white/[0.06] hover:text-[#F2C12E] md:hover:bg-transparent'
-                      }`}
+                        }`}
                       onClick={() => handleNavClick(key)}
                       type="button"
                     >
@@ -153,7 +152,7 @@ export function LandingPage({ onLaunch, onOpenDocs }: LandingPageProps) {
             type="button"
           >
             <span>Enter Dashboard</span>
-            <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
+            <svg className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={3.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
           </button>
 
           <button

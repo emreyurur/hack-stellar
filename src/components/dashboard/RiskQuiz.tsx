@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { RiskProfile } from '../../types/stellar'
 
 type QuizOption = {
@@ -51,25 +51,43 @@ function scoreToProfile(total: number): RiskProfile {
 
 const profileMeta: Record<
   RiskProfile,
-  { description: string; color: string; dotColor: string; emoji: string }
+  { description: string; color: string; dotColor: string; icon: ReactNode }
 > = {
   Conservative: {
     description: 'Stable lending pools with predictable yields and lower exposure.',
     color: 'text-[#16A34A]',
     dotColor: 'bg-[#16A34A]',
-    emoji: '🛡️',
+    icon: (
+      <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border border-[#16A34A]/30 bg-[#16A34A]/15 text-[#16A34A]">
+        <svg className="size-8" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      </div>
+    ),
   },
   Moderate: {
     description: 'A balanced mix of lending and LP positions for solid risk-adjusted returns.',
     color: 'text-[#F2C12E]',
     dotColor: 'bg-[#F2C12E]',
-    emoji: '⚖️',
+    icon: (
+      <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border border-[#F2C12E]/30 bg-[#F2C12E]/15 text-[#F2C12E]">
+        <svg className="size-8" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+      </div>
+    ),
   },
   Aggressive: {
     description: 'High-yield LP and rewards. Higher APY comes with more market exposure.',
     color: 'text-[#F97316]',
     dotColor: 'bg-[#F97316]',
-    emoji: '🚀',
+    icon: (
+      <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border border-[#F97316]/30 bg-[#F97316]/15 text-[#F97316]">
+        <svg className="size-8" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+    ),
   },
 }
 
@@ -109,7 +127,7 @@ export function RiskQuiz({
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0D0D12]/80 px-4 backdrop-blur-sm">
         <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.12] bg-[#14141E] shadow-2xl">
           <div className="p-8 text-center">
-            <div className="mb-4 text-5xl">{meta.emoji}</div>
+            <div>{meta.icon}</div>
             <p className="text-xs uppercase tracking-[0.18em] text-[#9CA3AF]">Your risk profile</p>
             <h2 className={`mt-2 text-4xl font-bold ${meta.color}`}>{result}</h2>
             <p className="mt-3 text-sm leading-relaxed text-[#9CA3AF]">{meta.description}</p>

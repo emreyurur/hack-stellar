@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { POOL_VOTING_CONTRACT_ID } from '../../services/poolVotingContract'
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
@@ -8,27 +9,18 @@ const navSections = [
     label: 'Getting Started',
     items: [
       { id: 'overview', label: 'Overview' },
-      { id: 'architecture', label: 'Architecture' },
+      { id: 'architecture', label: 'Technology Stack & Architecture' },
     ],
   },
   {
-    id: 'protocol',
-    label: 'Protocol',
+    id: 'core-features',
+    label: 'Core Features',
     items: [
-      { id: 'roadmap', label: 'Roadmap' },
-      { id: 'contracts', label: 'Contracts' },
-    ],
-  },
-  {
-    id: 'developers',
-    label: 'Developers',
-    items: [
-      { id: 'integration', label: 'Integration Guide' },
-      { id: 'api', label: 'API Reference', badge: 'Soon' },
+      { id: 'pools', label: 'DeFi Pools & LP' },
+      { id: 'contracts', label: 'Soroban Contracts Reference', badge: 'NEW' },
     ],
   },
 ]
-
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -41,22 +33,22 @@ export function DocsPage() {
   }
 
   return (
-    <div className="flex gap-0">
+    <div className="mx-auto flex max-w-[1440px] gap-8 px-5 py-8 sm:px-8">
       {/* ── Left sidebar ─────────────────────────────────────────────────── */}
-      <aside className="hidden w-52 shrink-0 lg:block">
-        <div className="sticky top-6 pr-6">
+      <aside className="hidden w-60 shrink-0 lg:block">
+        <div className="sticky top-24 pr-4">
           {navSections.map((section) => (
-            <div className="mb-7" key={section.id}>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B7B6B]">
+            <div className="mb-8" key={section.id}>
+              <p className="mb-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[#9CA3AF]">
                 {section.label}
               </p>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {section.items.map((item) => (
                   <button
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 ${
+                    className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-sm transition-all duration-150 ${
                       activeSection === item.id
-                        ? 'bg-[#1A2E1A] font-medium text-[#F5F0E8]'
-                        : 'text-[#6B7B6B] hover:bg-white/65 hover:text-[#1A2E1A]'
+                        ? 'border border-[#F2C12E]/30 bg-[#F2C12E]/15 font-semibold text-[#F2C12E]'
+                        : 'border border-transparent text-[#9CA3AF] hover:bg-white/[0.04] hover:text-[#F0F0F0]'
                     }`}
                     key={item.id}
                     onClick={() => scrollTo(item.id)}
@@ -64,7 +56,7 @@ export function DocsPage() {
                   >
                     <span>{item.label}</span>
                     {item.badge && (
-                      <span className="rounded-md border border-[#6B7B6B]/20 px-1.5 py-0.5 text-[10px] text-[#6B7B6B]">
+                      <span className="rounded-md border border-[#F2C12E]/30 bg-[#F2C12E]/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-[#F2C12E]">
                         {item.badge}
                       </span>
                     )}
@@ -74,101 +66,126 @@ export function DocsPage() {
             </div>
           ))}
 
-          <div className="mt-2 rounded-xl border border-[#6B7B6B]/15 bg-white/45 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6B7B6B]">
-              Version
-            </p>
-            <p className="mt-1 font-terminal text-xs font-semibold text-[#1A2E1A]">v0.1.0</p>
-            <p className="mt-0.5 text-[10px] text-[#6B7B6B]">Stellar Testnet</p>
+          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-[#12121A] p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#9CA3AF]">
+                System Status
+              </span>
+              <span className="flex size-2 rounded-full bg-[#4ade80] shadow-[0_0_8px_#4ade80]" />
+            </div>
+            <p className="mt-2 font-mono text-sm font-bold text-[#F0F0F0]">v0.1.0-testnet</p>
+            <p className="mt-1 text-xs text-[#9CA3AF]">Stellar Soroban & Horizon API</p>
           </div>
         </div>
       </aside>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <main className="min-w-0 flex-1 lg:px-10">
-
+      <main className="min-w-0 flex-1 lg:pl-6">
         {/* ── Overview ───────────────────────────────────────────────────── */}
-        <section className="scroll-mt-6" id="overview">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status="live">v0.1 — Live on Testnet</StatusBadge>
-            <span className="font-terminal text-xs text-[#6B7B6B]">Soroban · Horizon</span>
+        <section className="scroll-mt-24" id="overview">
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusBadge status="live">v0.1 — Live on Stellar Testnet</StatusBadge>
+            <span className="font-mono text-xs text-[#9CA3AF]">Soroban AMM · Horizon API</span>
           </div>
 
-          <h1 className="mt-4 text-[2.5rem] font-bold leading-tight tracking-tight text-[#1A2E1A]">
-            Terminal8 Protocol
+          <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-[#F0F0F0] sm:text-4xl">
+            Terminal8 Architecture & Docs
           </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-[#6B7B6B]">
-            An open, composable yield routing and position management protocol built on Stellar's
-            Soroban smart contract platform. Developers get primitives for batch asset management,
-            risk-adjusted yield allocation, and on-chain position tracking across the Stellar DeFi
-            ecosystem.
+          <p className="mt-4 max-w-3xl text-base leading-7 text-[#9CA3AF]">
+            Terminal8 is a non-custodial DeFi dashboard and automated liquidity management platform built on the Stellar network and Soroban smart contracts. Developers and liquidity providers get unified access to constant-product AMM pools, risk-adjusted yield scoring, and instant transaction signing via Freighter.
           </p>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <FeatureCard icon="⚡" title="Batch Swaps">
-              Route multiple assets to a single target via{' '}
-              <code className="font-terminal text-xs">PathPaymentStrictSend</code> in one
-              fee-bumped transaction envelope.
+          <div className="mt-8 grid gap-5 sm:grid-cols-3">
+            <FeatureCard
+              icon={
+                <svg className="size-5 text-[#F2C12E]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              }
+              title="Instant LP Operations"
+            >
+              Deposit and withdraw liquidity shares directly into Soroswap AMM pools (`AST1/AST2`, `XLM/USDC`) with automated XDR envelope construction.
             </FeatureCard>
-            <FeatureCard icon="🛡" title="Risk Oracle">
-              On-chain pool scoring across four axes: Liquidity (40), Age (20), Audit (20),
-              Activity (20). Total score out of 100.
+            <FeatureCard
+              icon={
+                <svg className="size-5 text-[#4ade80]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
+              }
+              title="Pool Trust Oracle"
+            >
+              Deterministic 4-axis reputation evaluation scoring every pool across Liquidity Depth (40pt), Protocol Age (20pt), Security Audit (20pt), and Volume (20pt).
             </FeatureCard>
-            <FeatureCard icon="📊" title="Position Manager">
-              Track, manage, and exit yield positions across Blend, Soroswap, and Aquarius —
-              full supply/withdraw lifecycle.
+            <FeatureCard
+              icon={
+                <svg className="size-5 text-[#60A5FA]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C19.496 3 20 3.504 20 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+                  />
+                </svg>
+              }
+              title="Portfolio & APY Sync"
+            >
+              Real-time synchronization between local storage state and remote Horizon portfolio indexes (`/api/v1/portfolio/sync`) for accurate yield tracking.
             </FeatureCard>
           </div>
         </section>
 
         <DocsDivider />
 
-        {/* ── Architecture ───────────────────────────────────────────────── */}
-        <section className="scroll-mt-6" id="architecture">
-          <SectionLabel>Architecture</SectionLabel>
-          <h2 className="mt-2 text-2xl font-bold text-[#1A2E1A]">Protocol Stack</h2>
-          <p className="mt-2 text-sm leading-6 text-[#6B7B6B]">
-            Terminal8 is a layered protocol. The React SDK communicates with Soroban contracts
-            for on-chain logic and with the Horizon API for pathfinding and transaction submission.
+        {/* ── Architecture & Technology Stack ───────────────────────────── */}
+        <section className="scroll-mt-24" id="architecture">
+          <SectionLabel>Technology Stack & Architecture</SectionLabel>
+          <h2 className="mt-2 text-2xl font-bold text-[#F0F0F0]">Full-Stack Architecture (Frontend & Backend)</h2>
+          <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">
+            Terminal8 combines a high-performance React 19 + Vite frontend dashboard with an enterprise-grade NestJS backend API that orchestrates Soroban RPC and Horizon endpoints with strict type safety and real-time indexing.
           </p>
 
-          <div className="mt-6 overflow-hidden rounded-2xl border border-[#6B7B6B]/15">
-            <div className="border-b border-[#6B7B6B]/10 bg-[#1A2E1A] px-5 py-3.5">
-              <p className="font-terminal text-xs text-[#C8A84B]">// protocol-stack.ts</p>
+          {/* Frontend Tech Stack Grid */}
+          <div className="mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#12121A]">
+            <div className="border-b border-white/[0.08] bg-[#181824] px-6 py-3.5 flex items-center justify-between">
+              <p className="font-mono text-xs font-semibold text-[#60A5FA]">// frontend-client-stack.ts</p>
+              <span className="rounded bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 font-mono text-[10px] text-blue-400 font-bold">Client Layer</span>
             </div>
-            <div className="grid divide-y divide-[#6B7B6B]/10 bg-white/45 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+            <div className="grid divide-y divide-white/[0.08] sm:grid-cols-4 sm:divide-x sm:divide-y-0">
               {[
                 {
-                  layer: 'Client',
-                  name: 'React SDK',
-                  desc: 'useWallet · usePools · usePositions',
-                  color: 'text-[#C8A84B]',
+                  layer: 'UI Framework',
+                  name: 'React 19 & Vite v6.0',
+                  desc: 'Concurrent Rendering · Hot Module Replacement · Ultra-fast Build Pipeline',
+                  color: 'text-[#60A5FA]',
                 },
                 {
-                  layer: 'Routing',
-                  name: 'Horizon API',
-                  desc: 'PathPayment · DEX pathfinding',
-                  color: 'text-blue-500',
+                  layer: 'Type & State',
+                  name: 'Strict TypeScript v5.6+',
+                  desc: 'Zero-runtime Type Errors · Custom Dashboard Hooks · Strict DTO Alignment',
+                  color: 'text-[#F2C12E]',
                 },
                 {
-                  layer: 'Contracts',
-                  name: 'Soroban',
-                  desc: 'PositionManager · RiskOracle · Router',
-                  color: 'text-purple-500',
+                  layer: 'Design & Styling',
+                  name: 'Tailwind CSS v3.4',
+                  desc: 'Utility-first Responsive Grid · Glassmorphism · Curated Dark Mode Aesthetics',
+                  color: 'text-purple-400',
                 },
                 {
-                  layer: 'Protocols',
-                  name: 'Integrations',
-                  desc: 'Blend · Soroswap · Aquarius',
+                  layer: 'Wallet & XDR',
+                  name: 'Stellar Wallets Kit & Freighter',
+                  desc: 'Multi-wallet Support · Cryptographic Challenge Signing · XDR Verification',
                   color: 'text-[#4ade80]',
                 },
               ].map((item) => (
-                <div className="p-5" key={item.layer}>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6B7B6B]">
+                <div className="p-6" key={item.layer}>
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#9CA3AF]">
                     {item.layer}
                   </p>
-                  <p className={`mt-2 text-sm font-semibold ${item.color}`}>{item.name}</p>
-                  <p className="mt-1.5 font-terminal text-xs leading-5 text-[#6B7B6B]">
+                  <p className={`mt-2 text-sm font-bold ${item.color}`}>{item.name}</p>
+                  <p className="mt-1.5 font-mono text-xs leading-5 text-[#9CA3AF]">
                     {item.desc}
                   </p>
                 </div>
@@ -176,126 +193,228 @@ export function DocsPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <ArchBlock badge="Horizon API" title="Routing Engine">
-              Finds optimal swap paths using Stellar's native DEX pathfinding.
-              Supports strict-send and strict-receive modes with configurable slippage protection
-              and automatic reserve buffering for XLM fee operations.
-            </ArchBlock>
-            <ArchBlock badge="Soroban" title="Risk Oracle">
-              Evaluates each pool across Liquidity depth (40pt), Protocol age (20pt),
-              Audit status (20pt), and Trading activity (20pt). Scores are computed
-              off-chain and can be migrated to a Soroban oracle in v0.2.
-            </ArchBlock>
-            <ArchBlock badge="Soroban" title="Position Manager">
-              Tracks user supply positions across all integrated protocols. Emits lifecycle
-              events — <code className="font-terminal text-[10px]">opened</code>,{' '}
-              <code className="font-terminal text-[10px]">accruing</code>,{' '}
-              <code className="font-terminal text-[10px]">withdrawn</code> — for frontend
-              indexing and earned yield calculation.
-            </ArchBlock>
-            <ArchBlock badge="Horizon API" title="Batch Router">
-              Bundles multiple{' '}
-              <code className="font-terminal text-[10px]">PathPaymentStrictSend</code> operations
-              into a single fee-bumped transaction envelope, minimising per-operation gas cost
-              and reducing failed partial swaps.
-            </ArchBlock>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-6">
+              <h3 className="text-base font-bold text-[#F0F0F0] flex items-center gap-2">
+                <span className="size-2 rounded-full bg-[#60A5FA]" />
+                Frontend Core & UI Architecture
+              </h3>
+              <p className="mt-2 text-xs leading-6 text-[#9CA3AF]">
+                <strong>React 19 & Vite:</strong> Delivers instantaneous UI feedback, custom hooks (`usePoolDashboard`, `usePortfolioDashboard`, `WalletContext`), and seamless component tree reconciliation.<br/>
+                <strong>Tailwind CSS & Recharts:</strong> Styled with custom glassmorphism (`backdrop-blur`), vibrant neon gradients, and interactive APY trend charts.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-6">
+              <h3 className="text-base font-bold text-[#F0F0F0] flex items-center gap-2">
+                <span className="size-2 rounded-full bg-[#4ade80]" />
+                Wallet Integration & CLI Terminal
+              </h3>
+              <p className="mt-2 text-xs leading-6 text-[#9CA3AF]">
+                <strong>Stellar Wallets Kit:</strong> Connects to **Freighter, xBull, LOBSTR, and Albedo** with automated challenge authorization (`signAuthEntry`).<br/>
+                <strong>Developer CLI Terminal:</strong> Embedded command suite (`positions`, `withdraw`, `pools`, `balance`) allowing power users to sign real XDR envelopes directly via command prompt.
+              </p>
+            </div>
+          </div>
+
+          {/* Backend Tech Stack Grid */}
+          <div className="mt-8 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#12121A]">
+            <div className="border-b border-white/[0.08] bg-[#181824] px-6 py-3.5 flex items-center justify-between">
+              <p className="font-mono text-xs font-semibold text-[#F2C12E]">// system-architecture.ts & backend-stack</p>
+              <span className="rounded bg-[#F2C12E]/10 border border-[#F2C12E]/20 px-2 py-0.5 font-mono text-[10px] text-[#F2C12E] font-bold">API Layer</span>
+            </div>
+            <div className="grid divide-y divide-white/[0.08] sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+              {[
+                {
+                  layer: 'Core Framework',
+                  name: 'NestJS & Node v20+',
+                  desc: 'Modular Architecture · Dependency Injection · RO-RO Pattern · Asynchronous Non-blocking I/O',
+                  color: 'text-[#F2C12E]',
+                },
+                {
+                  layer: 'Blockchain Layer',
+                  name: '@stellar/stellar-sdk v12.3',
+                  desc: 'XDR TransactionBuilder · Horizon API Integration · Indexer Mechanism · getLiquidityPoolId',
+                  color: 'text-blue-400',
+                },
+                {
+                  layer: 'Database & ORM',
+                  name: 'PostgreSQL v16 & TypeORM',
+                  desc: 'ACID Transaction History · Isolated Data Access Layer via @Entity and Repository Pattern',
+                  color: 'text-purple-400',
+                },
+                {
+                  layer: 'Queue & Caching',
+                  name: 'Redis v7 & BullMQ v5.7',
+                  desc: 'Cache Manager ioredis Adapter · Asynchronous Workers · CRON-based Retry Mechanism',
+                  color: 'text-[#4ade80]',
+                },
+              ].map((item) => (
+                <div className="p-6" key={item.layer}>
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#9CA3AF]">
+                    {item.layer}
+                  </p>
+                  <p className={`mt-2 text-sm font-bold ${item.color}`}>{item.name}</p>
+                  <p className="mt-1.5 font-mono text-xs leading-5 text-[#9CA3AF]">
+                    {item.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-6">
+              <h3 className="text-base font-bold text-[#F0F0F0] flex items-center gap-2">
+                <span className="size-2 rounded-full bg-[#F2C12E]" />
+                1. Core Framework & Language
+              </h3>
+              <div className="mt-4 grid gap-4 sm:grid-cols-3 font-mono text-xs text-[#CBD5E1]">
+                <div className="rounded-xl border border-white/[0.06] bg-[#0D0D12] p-4">
+                  <p className="font-bold text-white mb-1">Node.js (v20+) & V8 Engine</p>
+                  <p className="text-[#9CA3AF] text-[11px] leading-5">Asynchronous non-blocking I/O architecture processes intensive Horizon network requests without bottlenecks.</p>
+                </div>
+                <div className="rounded-xl border border-white/[0.06] bg-[#0D0D12] p-4">
+                  <p className="font-bold text-white mb-1">TypeScript (v5.1)</p>
+                  <p className="text-[#9CA3AF] text-[11px] leading-5">Strict mode enabled across all layers, avoiding `any` types and guaranteeing zero compile-time type errors.</p>
+                </div>
+                <div className="rounded-xl border border-white/[0.06] bg-[#0D0D12] p-4">
+                  <p className="font-bold text-white mb-1">NestJS (v10.0)</p>
+                  <p className="text-[#9CA3AF] text-[11px] leading-5">Modular domain structure (`HistoryModule`, `TestnetToolsModule`) utilizing strict DI and clean architectural patterns.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-6">
+              <h3 className="text-base font-bold text-[#F0F0F0] flex items-center gap-2">
+                <span className="size-2 rounded-full bg-blue-400" />
+                2. Blockchain & Stellar Integration (@stellar/stellar-sdk v12.3)
+              </h3>
+              <p className="mt-2 text-xs leading-6 text-[#9CA3AF]">
+                Core library providing full integration with the Stellar network. Smart contract logic, LP operations, trustlines, and token transfers are built on the backend (`TransactionBuilder`) and delivered to the client as XDR envelopes for Freighter wallet signing.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2 font-mono text-[11px]">
+                <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-blue-300">Horizon API Integration</span>
+                <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-blue-300">XDR Envelope Construction</span>
+                <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-blue-300">Asynchronous Horizon Indexer</span>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-6">
+                <h3 className="text-base font-bold text-[#F0F0F0] flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-purple-400" />
+                  3. Database & ORM Layer
+                </h3>
+                <p className="mt-2 text-xs leading-6 text-[#9CA3AF]">
+                  <strong>PostgreSQL (v16 Alpine):</strong> ACID-compliant persistent storage for user transaction records (`History`), profile metadata, and financial activity logs.<br/>
+                  <strong>TypeORM (v0.3.20):</strong> Strictly typed `@Entity` and `@Column` classes isolating database access (`@InjectRepository`) from business logic.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-6">
+                <h3 className="text-base font-bold text-[#F0F0F0] flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-[#4ade80]" />
+                  4. Caching & Queue Engine (Redis & BullMQ)
+                </h3>
+                <p className="mt-2 text-xs leading-6 text-[#9CA3AF]">
+                  <strong>Redis (v7) & ioredis:</strong> Caches high-frequency Horizon API queries via `@nestjs/cache-manager` and `cache-manager-ioredis-yet` adapter.<br/>
+                  <strong>BullMQ (v5.7):</strong> Manages CRON-based indexer synchronization and background workers with automated retry mechanisms.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ArchBlock badge="Security & Validations" title="JWT, Class Validator & Joi">
+                Stateless authentication via `@nestjs/jwt` & `passport-jwt`. Requests are validated using `Class Validator` (`@IsString()`, `@IsNotEmpty()`), while `Joi` verifies required environment variables (`.env`) on application startup.
+              </ArchBlock>
+              <ArchBlock badge="DevOps & QA" title="Docker, Swagger & Jest">
+                Containerized deployment (`docker-compose up -d`) orchestrates PostgreSQL, Redis, and API services in an isolated network. Live OpenAPI 3.0 specs are published at `/api/v1/docs`, backed by comprehensive `Jest` and `Supertest` suites.
+              </ArchBlock>
+            </div>
           </div>
         </section>
 
         <DocsDivider />
 
-        {/* ── Roadmap ────────────────────────────────────────────────────── */}
-        <section className="scroll-mt-6" id="roadmap">
-          <SectionLabel>Roadmap</SectionLabel>
-          <h2 className="mt-2 text-2xl font-bold text-[#1A2E1A]">Protocol Milestones</h2>
-          <p className="mt-2 text-sm leading-6 text-[#6B7B6B]">
-            Four versioned milestones from testnet MVP to full mainnet deployment with governance.
+        {/* ── Pools & LP ─────────────────────────────────────────────────── */}
+        <section className="scroll-mt-24" id="pools">
+          <SectionLabel>Core Features</SectionLabel>
+          <h2 className="mt-2 text-2xl font-bold text-[#F0F0F0]">DeFi Pools & LP Operations</h2>
+          <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">
+            Terminal8 prioritizes deep liquidity pools (`constant_product`) with instant deposit/withdraw capabilities and real-time shares tracking.
           </p>
 
           <div className="mt-6 space-y-4">
-            <RoadmapPhase
-              date="June 2026"
-              items={[
-                { text: 'Freighter wallet integration (isConnected, requestAccess, signTransaction)', done: true },
-                { text: 'Batch PathPaymentStrictSend engine with XLM reserve buffering and 1% slippage guard', done: true },
-                { text: 'Risk assessment quiz — 3-question profiling into Conservative / Moderate / Aggressive', done: true },
-                { text: 'Pool reputation scoring — Liquidity, Age, Audit, Activity axes with expandable breakdown', done: true },
-                { text: 'Blend Protocol testnet supply via Soroban PoolContractV2.submit()', done: true },
-                { text: 'Position management UI — open, track earned yield, partial or full withdrawal', done: true },
-                { text: 'Deterministic terminal with sweep all and show yield commands', done: true },
-              ]}
-              status="live"
-              title="Foundation"
-              version="v0.1"
-            />
-
-            <RoadmapPhase
-              date="Q3 2026"
-              items={[
-                { text: 'Soroswap LP position management — addLiquidity / removeLiquidity flows', done: false, active: true },
-                { text: 'Aquarius rewards auto-compounding via claim + re-supply loop', done: false, active: true },
-                { text: 'Real-time APY indexing from Soroban contract events via RPC stream', done: false },
-                { text: 'Multi-hop routing optimiser — shortest path across pool liquidity graph', done: false },
-                { text: 'Position health monitoring — LTV alerts for overleveraged Blend positions', done: false },
-                { text: 'Mainnet batch swap — full PathPayment pipeline on PUBLIC network', done: false },
-              ]}
-              status="in-progress"
-              title="DeFi Primitives"
-              version="v0.2"
-            />
-
-            <RoadmapPhase
-              date="Q4 2026"
-              items={[
-                { text: '@terminal8/sdk — TypeScript library published on npm', done: false },
-                { text: 'REST API at api.stellardomain.xyz with OpenAPI 3.0 schema', done: false },
-                { text: 'Webhooks for position lifecycle events (opened · accruing · withdrawn)', done: false },
-                { text: 'CLI tool: terminal8 swap, terminal8 positions, terminal8 pools', done: false },
-                { text: 'Developer dashboard with API key management and usage analytics', done: false },
-                { text: 'Testnet sandbox environment for protocol integration testing', done: false },
-              ]}
-              status="planned"
-              title="Developer SDK"
-              version="v0.3"
-            />
-
-            <RoadmapPhase
-              date="Q1 2027"
-              items={[
-                { text: 'Soroban contract audits — PositionManager, RiskOracle, BatchRouter', done: false },
-                { text: 'Full PUBLIC network deployment across all integrated protocols', done: false },
-                { text: 'SDP governance token — on-chain proposal creation and token voting', done: false },
-                { text: 'Protocol fee switch — configurable basis points via DAO resolution', done: false },
-                { text: 'Ecosystem grants program for builders integrating the SDK', done: false },
-                { text: 'Cross-chain research — IBC bridge for Cosmos chain yield access', done: false },
-              ]}
-              status="planned"
-              title="Mainnet"
-              version="v1.0"
-            />
+            <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-[#F0F0F0]">Constant Product AMM Mechanics</h3>
+                <span className="rounded-full border border-[#4ade80]/30 bg-[#4ade80]/15 px-3 py-1 font-mono text-xs font-semibold text-[#4ade80]">
+                  Active
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">
+                When depositing into a pool (e.g. `AST1 / AST2` or `XLM / USDC`), the protocol automatically calculates the proportional asset reserves and issues LP shares (`totalShares`). Users earn transaction fees (`feeBp: 30`) proportional to their share of the pool.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-4 rounded-xl border border-white/[0.06] bg-[#0D0D12] p-4 font-mono text-xs text-[#CBD5E1]">
+                <div><span className="text-[#9CA3AF]">Asset A Code:</span> AST1 / XLM</div>
+                <div><span className="text-[#9CA3AF]">Asset B Code:</span> AST2 / USDC</div>
+                <div><span className="text-[#9CA3AF]">Fee Basis Points:</span> 30 bps (0.30%)</div>
+              </div>
+            </div>
           </div>
         </section>
 
         <DocsDivider />
 
-        {/* ── Contracts ──────────────────────────────────────────────────── */}
-        <section className="scroll-mt-6" id="contracts">
+        {/* ── Deployed Contracts Reference ───────────────────────────── */}
+        <section className="scroll-mt-24" id="contracts">
           <SectionLabel>Contract Reference</SectionLabel>
-          <h2 className="mt-2 text-2xl font-bold text-[#1A2E1A]">Deployed Contracts</h2>
-          <p className="mt-2 text-sm leading-6 text-[#6B7B6B]">
-            All contracts are currently live on{' '}
-            <code className="font-terminal text-xs">Test SDF Network ; September 2015</code>.
-            Mainnet addresses will be published after audit completion.
+          <h2 className="mt-2 text-2xl font-bold text-[#F0F0F0]">Soroban Deployed Contracts</h2>
+          <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">
+            Terminal8 smart contracts run directly on <code className="font-mono text-xs text-[#F2C12E]">Test SDF Network ; September 2015</code> with persistent on-chain state storage.
           </p>
 
-          <div className="mt-4 overflow-hidden rounded-2xl border border-[#6B7B6B]/15">
-            <table className="w-full text-sm">
+          {/* Featured PoolVotingContract Card */}
+          <div className="mt-6 rounded-2xl border border-[#F2C12E]/40 bg-[#12121A] p-6 shadow-xl">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="rounded-md border border-[#F2C12E]/40 bg-[#F2C12E]/15 px-2.5 py-1 font-mono text-[11px] font-bold text-[#F2C12E]">
+                    Soroban Persistent Storage
+                  </span>
+                  <h3 className="text-xl font-extrabold text-white">PoolVotingContract</h3>
+                  <StatusBadge status="live">Active on Testnet</StatusBadge>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">
+                  Stores on-chain upvote/downvote aggregate scores (<code className="font-mono text-xs text-[#CBD5E1]">Score(Address)</code>) and a master pool discovery list (<code className="font-mono text-xs text-[#CBD5E1]">PoolList</code>) on Stellar Soroban with automatic 30-day TTL extension.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-xs text-[#CBD5E1]">
+                  <span className="text-[#9CA3AF]">Contract Address:</span>
+                  <code className="rounded bg-[#1E1E2E] px-2.5 py-1 text-[#F2C12E] select-all">{POOL_VOTING_CONTRACT_ID}</code>
+                </div>
+              </div>
+              <a
+                href={`https://stellar.expert/explorer/testnet/contract/${POOL_VOTING_CONTRACT_ID}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center justify-center gap-2.5 rounded-xl bg-[#F2C12E] px-5 py-3 font-mono text-xs font-extrabold text-[#0D0D12] shadow-[0_0_20px_rgba(242,193,46,0.3)] transition hover:bg-[#FDE047] hover:shadow-[0_0_25px_rgba(242,193,46,0.5)]"
+              >
+                <span>View on Stellar Explorer ↗</span>
+                <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <div className="mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#12121A]">
+            <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-[#1A2E1A] text-left">
-                  {['Contract', 'Address', 'Network', 'Status'].map((h) => (
+                <tr className="border-b border-white/[0.08] bg-[#181824]">
+                  {['Contract Name', 'Contract Address / Explorer Link', 'Network', 'Status'].map((h) => (
                     <th
-                      className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#F5F0E8]/50"
+                      className="px-6 py-4 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#9CA3AF]"
                       key={h}
                     >
                       {h}
@@ -303,49 +422,52 @@ export function DocsPage() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#6B7B6B]/10 bg-white/45">
+              <tbody className="divide-y divide-white/[0.06] font-mono text-xs">
                 {[
                   {
-                    name: 'PositionManager',
-                    addr: 'CCEBVDYM32YNYCVNRXQKD...Q44HGF',
+                    name: 'PoolVotingContract',
+                    addr: POOL_VOTING_CONTRACT_ID,
                     network: 'Testnet',
                     status: 'live' as const,
                   },
                   {
-                    name: 'RiskOracle',
-                    addr: 'CDL7K4BV...XRWP3M8Q',
+                    name: 'Soroswap AMM Router',
+                    addr: 'CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH',
                     network: 'Testnet',
                     status: 'live' as const,
                   },
                   {
-                    name: 'BatchRouter',
-                    addr: 'CBY28KLP...9ZQ1NV4R',
+                    name: 'XLM Asset SAC',
+                    addr: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
                     network: 'Testnet',
-                    status: 'in-progress' as const,
+                    status: 'live' as const,
                   },
                   {
-                    name: 'PositionManager',
-                    addr: 'TBD — post-audit',
-                    network: 'Mainnet',
-                    status: 'planned' as const,
+                    name: 'USDC Asset SAC',
+                    addr: 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU',
+                    network: 'Testnet',
+                    status: 'live' as const,
                   },
                 ].map((row, i) => (
-                  <tr className="hover:bg-white/60 transition-colors duration-100" key={i}>
-                    <td className="px-5 py-3.5 font-terminal text-xs font-semibold text-[#1A2E1A]">
-                      {row.name}
+                  <tr className="transition-colors hover:bg-white/[0.03]" key={i}>
+                    <td className="px-6 py-4 font-semibold text-[#F0F0F0]">{row.name}</td>
+                    <td className="px-6 py-4">
+                      <a
+                        href={`https://stellar.expert/explorer/testnet/contract/${row.addr}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-[#60A5FA] hover:text-[#F2C12E] hover:underline transition"
+                        title="Open in Stellar Explorer"
+                      >
+                        <span>{row.addr.slice(0, 10)}...{row.addr.slice(-8)}</span>
+                        <svg className="size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        </svg>
+                      </a>
                     </td>
-                    <td className="px-5 py-3.5 font-terminal text-xs text-[#6B7B6B]">
-                      {row.addr}
-                    </td>
-                    <td className="px-5 py-3.5 text-xs text-[#6B7B6B]">{row.network}</td>
-                    <td className="px-5 py-3.5">
-                      <StatusBadge status={row.status}>
-                        {row.status === 'live'
-                          ? 'Live'
-                          : row.status === 'in-progress'
-                            ? 'In progress'
-                            : 'Planned'}
-                      </StatusBadge>
+                    <td className="px-6 py-4 text-[#CBD5E1]">{row.network}</td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={row.status}>Live</StatusBadge>
                     </td>
                   </tr>
                 ))}
@@ -354,200 +476,29 @@ export function DocsPage() {
           </div>
         </section>
 
-        <DocsDivider />
-
-        {/* ── Integration Guide ──────────────────────────────────────────── */}
-        <section className="scroll-mt-6" id="integration">
-          <SectionLabel>Integration Guide</SectionLabel>
-          <h2 className="mt-2 text-2xl font-bold text-[#1A2E1A]">Integrate the Protocol</h2>
-          <p className="mt-2 text-sm leading-6 text-[#6B7B6B]">
-            The TypeScript SDK ships in v0.3. Until then, use the Soroban contracts and Horizon API
-            directly — the snippets below are production-ready and extracted from the live frontend.
-          </p>
-
-          <SubHeading>1. Connect Freighter wallet</SubHeading>
-          <p className="mt-1 mb-3 text-sm text-[#6B7B6B]">
-            Use the <code className="font-terminal text-xs">@stellar/freighter-api</code> package
-            to request wallet access and retrieve network details for the Soroban RPC URL.
-          </p>
-          <CodeBlock language="typescript">{`import {
-  isConnected,
-  requestAccess,
-  getNetworkDetails,
-} from '@stellar/freighter-api'
-
-const connection = await isConnected()
-if (!connection.isConnected) throw new Error('Freighter not installed')
-
-const access = await requestAccess()
-// { address: 'GABC...1234', error?: ... }
-
-const details = await getNetworkDetails()
-// { network, networkPassphrase, sorobanRpcUrl, networkUrl }
-
-console.log('Connected:', access.address)
-console.log('Network:', details.network) // 'TESTNET' | 'PUBLIC'`}</CodeBlock>
-
-          <SubHeading>2. Execute a batch swap</SubHeading>
-          <p className="mt-1 mb-3 text-sm text-[#6B7B6B]">
-            Find the optimal strict-send path on Horizon, then bundle multiple swap operations
-            into a single fee-bumped envelope.
-          </p>
-          <CodeBlock language="typescript">{`import {
-  Horizon,
-  Operation,
-  TransactionBuilder,
-  Asset,
-  BASE_FEE,
-} from '@stellar/stellar-sdk'
-import { signTransaction } from '@stellar/freighter-api'
-
-const horizon = new Horizon.Server(networkUrl)
-const account = await horizon.loadAccount(publicKey)
-
-// Find best path for each source asset
-const paths = await horizon
-  .strictSendPaths(sourceAsset, sendAmount, [destinationAsset])
-  .call()
-
-const best = paths.records.sort(
-  (a, b) => Number(b.destination_amount) - Number(a.destination_amount)
-)[0]
-
-// Apply 1% slippage buffer
-const destMin = (Number(best.destination_amount) * 0.99).toFixed(7)
-
-// Build multi-op transaction
-let builder = new TransactionBuilder(account, {
-  fee: (Number(BASE_FEE) * ops.length).toString(),
-  networkPassphrase,
-}).setTimeout(60)
-
-for (const op of ops) {
-  builder = builder.addOperation(
-    Operation.pathPaymentStrictSend({ ...op })
-  )
-}
-
-const tx = builder.build()
-const { signedTxXdr } = await signTransaction(tx.toXDR(), {
-  address: publicKey,
-  networkPassphrase,
-})
-
-const response = await horizon.submitTransaction(
-  TransactionBuilder.fromXDR(signedTxXdr, networkPassphrase)
-)
-console.log('Batch swap hash:', response.hash)`}</CodeBlock>
-
-          <SubHeading>3. Supply to Blend (Soroban)</SubHeading>
-          <p className="mt-1 mb-3 text-sm text-[#6B7B6B]">
-            Use <code className="font-terminal text-xs">@blend-capital/blend-sdk</code> to build
-            the supply operation, then prepare and submit via the Soroban RPC.
-          </p>
-          <CodeBlock language="typescript">{`import { PoolContractV2, RequestType } from '@blend-capital/blend-sdk'
-import { rpc, xdr, TransactionBuilder, BASE_FEE } from '@stellar/stellar-sdk'
-import { signTransaction } from '@stellar/freighter-api'
-
-const POOL_ID   = 'CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF'
-const USDC_ADDR = 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU'
-
-const pool = new PoolContractV2(POOL_ID)
-const amount = BigInt(Math.floor(supplyAmount * 10_000_000)) // to stroops
-
-const op = xdr.Operation.fromXDR(
-  pool.submit({
-    from:    publicKey,
-    spender: publicKey,
-    to:      publicKey,
-    requests: [{
-      amount,
-      request_type: RequestType.SupplyCollateral,
-      address: USDC_ADDR,
-    }],
-  }),
-  'base64'
-)
-
-const rpcServer = new rpc.Server(sorobanRpcUrl)
-
-const rawTx = new TransactionBuilder(account, {
-  fee: BASE_FEE,
-  networkPassphrase,
-})
-  .addOperation(op)
-  .setTimeout(60)
-  .build()
-
-const prepared = await rpcServer.prepareTransaction(rawTx)
-
-const { signedTxXdr } = await signTransaction(prepared.toXDR(), {
-  address: publicKey,
-  networkPassphrase,
-})
-
-const result = await rpcServer.sendTransaction(
-  TransactionBuilder.fromXDR(signedTxXdr, networkPassphrase)
-)
-
-console.log('Supply tx hash:', result.hash)
-// result.status: 'PENDING' | 'SUCCESS' | 'ERROR'`}</CodeBlock>
-
-          <SubHeading>4. Pool reputation scoring</SubHeading>
-          <p className="mt-1 mb-3 text-sm text-[#6B7B6B]">
-            The reputation formula is deterministic and can be computed client-side or migrated to
-            a Soroban oracle in v0.2.
-          </p>
-          <CodeBlock language="typescript">{`type PoolReputation = {
-  liquidity: number // 0–40  pool TVL weight
-  age:       number // 0–20  days since first tx
-  audit:     number // 0–20  0 | 10 | 15 | 20
-  activity:  number // 0–20  30-day volume rank
-}
-
-function reputationScore(r: PoolReputation): number {
-  return r.liquidity + r.age + r.audit + r.activity
-}
-
-function reputationLabel(score: number) {
-  if (score >= 75) return 'Trusted'
-  if (score >= 50) return 'Moderate'
-  return 'Risky'
-}
-
-// Example: Blend USDC Lending Pool
-const blendUsdc: PoolReputation = {
-  liquidity: 35, // $2.4M TVL
-  age:       18, // ~4 months live
-  audit:     20, // audited by OtterSec
-  activity:  14, // active borrower base
-}
-
-console.log(reputationScore(blendUsdc))  // 87
-console.log(reputationLabel(87))         // 'Trusted'`}</CodeBlock>
-        </section>
-
         {/* ── Footer CTA ─────────────────────────────────────────────────── */}
-        <div className="mb-6 mt-12 rounded-2xl border border-[#C8A84B]/25 bg-[#C8A84B]/8 p-6">
+        <div className="mb-10 mt-14 rounded-2xl border border-[#F2C12E]/30 bg-[#F2C12E]/10 p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-semibold text-[#1A2E1A]">Build on Terminal8</p>
-              <p className="mt-1 text-sm text-[#6B7B6B]">
-                The protocol is open source. PRs, issues, and integrations welcome.
+              <p className="font-bold text-[#F0F0F0]">Ready to test live pool operations?</p>
+              <p className="mt-1 text-sm text-[#9CA3AF]">
+                Connect your wallet on the Home tab or use the API Tester to inspect raw XDR envelopes.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <a className="rounded-xl border border-[#1A2E1A]/30 bg-[#1A2E1A] px-4 py-2.5 text-sm font-semibold text-[#F5F0E8] transition hover:bg-[#0F1F0F]" href="#">
-                GitHub →
-              </a>
-              <a className="rounded-xl border border-[#6B7B6B]/20 bg-white/55 px-4 py-2.5 text-sm font-semibold text-[#1A2E1A] transition hover:bg-white/80" href="#">
-                Discord
+            <div className="flex flex-wrap gap-3">
+              <a
+                className="inline-flex items-center gap-2 rounded-xl bg-[#F2C12E] px-5 py-2.5 text-sm font-black tracking-wide text-[#0D0D12] transition hover:bg-[#FDE047]"
+                href="#"
+              >
+                <span>Launch Dashboard</span>
+                <svg className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={3.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
               </a>
             </div>
           </div>
         </div>
       </main>
-
     </div>
   )
 }
@@ -562,18 +513,18 @@ function StatusBadge({
   status: 'live' | 'in-progress' | 'planned'
 }) {
   const styles = {
-    live: 'border-[#4ade80]/30 bg-[#4ade80]/15 text-[#1A2E1A]',
-    'in-progress': 'border-[#C8A84B]/30 bg-[#C8A84B]/15 text-[#1A2E1A]',
-    planned: 'border-[#6B7B6B]/20 bg-[#6B7B6B]/10 text-[#6B7B6B]',
+    live: 'border-[#4ade80]/30 bg-[#4ade80]/15 text-[#4ade80]',
+    'in-progress': 'border-[#F2C12E]/30 bg-[#F2C12E]/15 text-[#F2C12E]',
+    planned: 'border-white/[0.12] bg-white/[0.06] text-[#9CA3AF]',
   }
   const dots = {
     live: 'bg-[#4ade80]',
-    'in-progress': 'bg-[#C8A84B]',
-    planned: 'bg-[#6B7B6B]/50',
+    'in-progress': 'bg-[#F2C12E]',
+    planned: 'bg-[#9CA3AF]',
   }
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${styles[status]}`}
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-xs font-semibold ${styles[status]}`}
     >
       <span className={`size-1.5 rounded-full ${dots[status]}`} />
       {children}
@@ -587,16 +538,16 @@ function FeatureCard({
   title,
 }: {
   children: ReactNode
-  icon: string
+  icon: ReactNode
   title: string
 }) {
   return (
-    <div className="rounded-2xl border border-[#6B7B6B]/15 bg-white/55 p-5">
-      <div className="mb-3 flex size-9 items-center justify-center rounded-xl bg-[#1A2E1A] text-base">
+    <div className="rounded-2xl border border-white/[0.08] bg-[#12121A] p-6 transition-all hover:border-white/[0.16]">
+      <div className="mb-4 flex size-10 items-center justify-center rounded-xl border border-[#F2C12E]/30 bg-[#F2C12E]/15">
         {icon}
       </div>
-      <p className="font-semibold text-[#1A2E1A]">{title}</p>
-      <p className="mt-1.5 text-sm leading-6 text-[#6B7B6B]">{children}</p>
+      <p className="font-bold text-[#F0F0F0]">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">{children}</p>
     </div>
   )
 }
@@ -611,128 +562,25 @@ function ArchBlock({
   title: string
 }) {
   return (
-    <div className="rounded-xl border border-[#6B7B6B]/15 bg-white/45 p-5">
-      <div className="flex items-center gap-2">
-        <p className="font-semibold text-[#1A2E1A]">{title}</p>
-        <span className="rounded-md border border-[#6B7B6B]/20 px-1.5 py-0.5 font-terminal text-[10px] text-[#6B7B6B]">
+    <div className="rounded-xl border border-white/[0.08] bg-[#12121A] p-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-bold text-[#F0F0F0]">{title}</p>
+        <span className="rounded-md border border-[#F2C12E]/30 bg-[#F2C12E]/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-[#F2C12E]">
           {badge}
         </span>
       </div>
-      <p className="mt-2 text-sm leading-6 text-[#6B7B6B]">{children}</p>
+      <p className="mt-2.5 text-sm leading-6 text-[#9CA3AF]">{children}</p>
     </div>
   )
 }
 
-function RoadmapPhase({
-  date,
-  items,
-  status,
-  title,
-  version,
-}: {
-  date: string
-  items: { text: string; done?: boolean; active?: boolean }[]
-  status: 'live' | 'in-progress' | 'planned'
-  title: string
-  version: string
-}) {
-  const borderColor = {
-    live: 'border-[#4ade80]/25',
-    'in-progress': 'border-[#C8A84B]/25',
-    planned: 'border-[#6B7B6B]/15',
-  }[status]
-
-  const versionColor = {
-    live: 'text-[#4ade80]',
-    'in-progress': 'text-[#C8A84B]',
-    planned: 'text-[#6B7B6B]',
-  }[status]
-
-  return (
-    <div className={`overflow-hidden rounded-2xl border ${borderColor} bg-white/45`}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#6B7B6B]/10 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <span className={`font-terminal text-xs font-bold ${versionColor}`}>{version}</span>
-          <h3 className="text-base font-semibold text-[#1A2E1A]">{title}</h3>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-[#6B7B6B]">{date}</span>
-          <StatusBadge status={status}>
-            {status === 'live' ? 'Live' : status === 'in-progress' ? 'In progress' : 'Planned'}
-          </StatusBadge>
-        </div>
-      </div>
-
-      <div className="px-6 py-5">
-        <div className="space-y-3">
-          {items.map((item, i) => (
-            <div className="flex items-start gap-3" key={i}>
-              <span
-                className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border font-terminal text-[10px] font-bold ${
-                  item.done
-                    ? 'border-[#4ade80]/40 bg-[#4ade80]/15 text-[#4ade80]'
-                    : item.active
-                      ? 'border-[#C8A84B]/40 bg-[#C8A84B]/15 text-[#C8A84B]'
-                      : 'border-[#6B7B6B]/20 bg-transparent text-transparent'
-                }`}
-              >
-                {item.done ? '✓' : item.active ? '◉' : ''}
-              </span>
-              <p
-                className={`text-sm leading-6 ${
-                  item.done ? 'text-[#1A2E1A]' : 'text-[#6B7B6B]'
-                }`}
-              >
-                {item.text}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function CodeBlock({ children, language }: { children: string; language: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(children)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-[#F5F0E8]/5">
-      <div className="flex items-center justify-between bg-[#1A2E1A] px-4 py-2.5">
-        <span className="font-terminal text-xs text-[#C8A84B]">{language}</span>
-        <button
-          className="font-terminal text-xs text-[#F5F0E8]/40 transition hover:text-[#F5F0E8]/80"
-          onClick={handleCopy}
-          type="button"
-        >
-          {copied ? '✓ Copied' : 'Copy'}
-        </button>
-      </div>
-      <pre className="overflow-x-auto bg-[#0A1A0A] px-5 py-4 font-terminal text-xs leading-6 text-[#F5F0E8]/80">
-        <code>{children}</code>
-      </pre>
-    </div>
-  )
-}
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#6B7B6B]">{children}</p>
-  )
-}
-
-function SubHeading({ children }: { children: ReactNode }) {
-  return (
-    <h3 className="mt-8 mb-1 text-base font-semibold text-[#1A2E1A]">{children}</h3>
+    <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-[#F2C12E]">{children}</p>
   )
 }
 
 function DocsDivider() {
-  return <hr className="my-10 border-[#6B7B6B]/15" />
+  return <hr className="my-10 border-white/[0.08]" />
 }

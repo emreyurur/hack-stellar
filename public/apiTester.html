@@ -134,6 +134,13 @@
     <pre id="portfolioResult">Sonuç bekleniyor...</pre>
   </div>
 
+  <div class="card" style="border-left-color: #8b5cf6;">
+    <h2>2.5. İşlem Geçmişi (/api/v1/history)</h2>
+    <p>Bağlı cüzdanın veya havuzların tüm geçmiş deposit ve withdraw işlemlerini getir.</p>
+    <button id="btnHistory" disabled style="background: #8b5cf6;">İşlem Geçmişini Getir</button>
+    <pre id="historyResult">Sonuç bekleniyor...</pre>
+  </div>
+
   <div class="card">
     <h2>3. İşlem İnşası (Orchestrator)</h2>
     <p>Deposit veya Withdraw işlemi için XDR oluştur.</p>
@@ -240,6 +247,7 @@
         const verifyData = await verifyRes.json();
 
         jwtToken = verifyData.accessToken;
+        try { localStorage.setItem('terminal8_jwt_token', jwtToken); } catch(e) {}
         tokenResult.innerText = `JWT Token: ${jwtToken}`;
         authStatus.className = 'status success';
         authStatus.innerText = `Bağlantı Başarılı: ${userPublicKey}`;
@@ -247,6 +255,7 @@
         // BAŞARILI GİRİŞ SONRASI BUTONLARI AKTİF ET
         document.getElementById('btnBuildTx').disabled = false;
         document.getElementById('btnPortfolio').disabled = false;
+        document.getElementById('btnHistory').disabled = false;
 
       } catch (err) {
         authStatus.className = 'status error';
@@ -260,7 +269,7 @@
       portfolioResult.innerText = 'Backend\'den portföy verileri çekiliyor...';
 
       try {
-        const res = await fetch(`${API_BASE}/api/v1/portfolio/${userPublicKey}`, {
+        const res = await fetch(`${API_BASE}api/v1/portfolio/${userPublicKey}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${jwtToken}`,
@@ -277,6 +286,44 @@
         portfolioResult.innerText = JSON.stringify(data, null, 2);
       } catch (err) {
         portfolioResult.innerText = `API Hatası: ${err.message}`;
+      }
+    });
+
+    // YENİ: İşlem Geçmişi Çekme İşlemi
+    document.getElementById('btnHistory').addEventListener('click', async () => {
+      const historyResult = document.getElementById('historyResult');
+      historyResult.innerText = 'Backend\'den geçmiş işlemler çekiliyor...';
+
+      try {
+        const res = await fetch(`${API_BASE}api/v1/history?limit=20&page=1`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${jwtToken || localStorage.getItem('terminal8_jwt_token') || ''}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || JSON.stringify(data));
+        }
+
+        historyResult.innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        historyResult.innerText = `API Hatası: ${err.message}`;
+      }
+    });
+
+    // Sayfa Yüklendiğinde Varolan Tokeni Kontrol Et
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedToken = localStorage.getItem('terminal8_jwt_token');
+      if (savedToken) {
+        jwtToken = savedToken;
+        document.getElementById('tokenResult').innerText = `JWT Token (Kayıtlı): ${jwtToken}`;
+        document.getElementById('btnBuildTx').disabled = false;
+        document.getElementById('btnPortfolio').disabled = false;
+        document.getElementById('btnHistory').disabled = false;
       }
     });
 

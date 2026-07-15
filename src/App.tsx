@@ -3,6 +3,7 @@ import { DefiOperations } from './components/dashboard/DefiOperations'
 import { Header } from './components/dashboard/Header'
 import { RiskQuiz } from './components/dashboard/RiskQuiz'
 import { ApiTesterView } from './components/dashboard/ApiTesterView'
+import { TokenStudioView } from './components/dashboard/TokenStudioView'
 import { DocsPage } from './components/docs/DocsPage'
 import { LandingPage } from './components/landing/LandingPage'
 import { BottomTerminal, CommandPalette } from './components/terminal/CommandPalette'
@@ -12,7 +13,7 @@ import { useWallet } from './context/useWallet'
 import { useWalletBalances } from './hooks/useWalletBalances'
 import type { LocalPosition, RiskProfile, WalletBalance } from './types/stellar'
 
-export type AppPage = 'landing' | 'home' | 'docs' | 'tester'
+export type AppPage = 'landing' | 'home' | 'studio' | 'docs' | 'tester'
 
 const initialLines: TerminalLine[] = [
   { id: 'boot-1', kind: 'log', text: 'Soroban RPC ready. Type help for commands.' },
@@ -142,10 +143,17 @@ function AppInner() {
     [networkPassphrase, networkUrl, localPositions, publicKey, status, xlmBalance, usdcBalance, handleWithdrawn],
   )
 
+  const handleLaunchApp = () => {
+    window.alert(
+      "Notice: We are currently in the Stellar Testnet phase.\n\nIf you don't have enough test tokens right now, you can easily mint tokens directly from our 'Token Studio' to test LPs!"
+    )
+    setActivePage('home')
+  }
+
   if (activePage === 'landing') {
     return (
       <LandingPage
-        onLaunch={() => setActivePage('home')}
+        onLaunch={handleLaunchApp}
         onOpenDocs={() => setActivePage('docs')}
       />
     )
@@ -166,6 +174,27 @@ function AppInner() {
       >
         {activePage === 'home' ? (
           <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-[#F2C12E]/40 bg-[#F2C12E]/10 px-5 py-4 text-sm text-[#F0F0F0] shadow-lg">
+              <div className="flex items-center gap-3">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#F2C12E] text-base font-bold text-[#0D0D12]">
+                  ⚠️
+                </span>
+                <div>
+                  <p className="font-bold text-white">Stellar Testnet Phase Notice</p>
+                  <p className="mt-0.5 text-xs text-[#E5E7EB]">
+                    If you don't have test tokens right now, you can easily mint custom assets from our <span className="font-bold text-[#F2C12E]">Token Studio</span> to test LPs!
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActivePage('token-studio')}
+                type="button"
+                className="shrink-0 rounded-xl bg-[#F2C12E] px-4 py-2 font-mono text-xs font-bold text-[#0D0D12] transition hover:bg-[#e0b429]"
+              >
+                Go to Token Studio →
+              </button>
+            </div>
+
             <DefiOperations
               balances={balances}
               onPositionAdded={handlePositionAdded}
@@ -177,6 +206,8 @@ function AppInner() {
               xlmBalance={xlmBalance}
             />
           </div>
+        ) : activePage === 'studio' ? (
+          <TokenStudioView />
         ) : activePage === 'tester' ? (
           <ApiTesterView />
         ) : (
