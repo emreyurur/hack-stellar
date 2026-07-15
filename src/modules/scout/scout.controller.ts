@@ -39,6 +39,31 @@ export class ScoutController {
     return this.scoutService.getPools(pageNumber, limitNumber);
   }
 
+  @Get("recommended/:pubkey")
+  @ApiOperation({ summary: "Get recommended pools based on user's token balances" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    type: Number,
+    description: "Page number (default: 1)",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: "Items per page (default: 50)",
+  })
+  @ApiResponse({ status: 200, description: "Paginated and ranked list of pools" })
+  async getRecommendedPools(
+    @Param("pubkey") pubkey: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string
+  ) {
+    const pageNumber = page ? parseInt(page, 10) : 1;
+    const limitNumber = limit ? parseInt(limit, 10) : 50;
+    return this.scoutService.getRecommendedPools(pubkey, pageNumber, limitNumber);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get a specific pool by ID" })
   @ApiResponse({

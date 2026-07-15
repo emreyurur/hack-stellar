@@ -178,6 +178,60 @@ export class ScoutService {
     };
   }
 
+  async getRecommendedPools(pubkey: string, page: number = 1, limit: number = 50) {
+    const skip = (page - 1) * limit;
+    
+    // 1. Fetch user's account from Horizon to get their balances
+    const account = await this.horizonClient.fetchAccount(pubkey);
+    
+    // If account doesn't exist on network, return default sort
+    if (!account || !account.balances || account.balances.length === 0) {
+      return this.getPools(page, limit);
+    }
+
+    // 2. Extract string identifiers for user's assets in format "CODE:ISSUER" or "XLM:null"
+    const userAssets = account.balances
+      .filter(b => b.asset_type !== 'liquidity_pool_shares')
+      .map(b => {
+        if (b.asset_type === 'native') return 'XLM:null';
+        return `${b.asset_code}:${b.asset_issuer}`;
+      });
+
+    const queryBuilder = this.poolRepository.createQueryBuilder("pool")
+      .where("pool.isActive = :isActive", { isActive: true });
+
+    // 3. Compute match score if user has assets
+    if (userAssets.length > 0) {
+      queryBuilder.addSelect(
+        `(
+          CASE WHEN CONCAT(pool.assetACode, ':', COALESCE(pool.assetAIssuer, 'null')) IN (:...userAssets) THEN 1 ELSE 0 END
+          +
+          CASE WHEN CONCAT(pool.assetBCode, ':', COALESCE(pool.assetBIssuer, 'null')) IN (:...userAssets) THEN 1 ELSE 0 END
+        )`,
+        'matchScore'
+      )
+      .setParameter('userAssets', userAssets)
+      .orderBy('matchScore', 'DESC')
+      .addOrderBy('pool.totalTrustlines', 'DESC');
+    } else {
+      queryBuilder.orderBy('pool.totalTrustlines', 'DESC');
+    }
+
+    // 4. Paginate
+    queryBuilder.skip(skip).take(limit);
+    
+    // getManyAndCount will run the query and return entities (the virtual matchScore column won't be mapped to entity, which is fine)
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   async getPool(id: string) {
     return this.poolRepository.findOne({ where: { id } });
   }

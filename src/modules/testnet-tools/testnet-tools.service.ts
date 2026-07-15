@@ -46,12 +46,16 @@ export class TestnetToolsService {
       let assetB = asset2;
       let maxAmountA = params.amountA;
       let maxAmountB = params.amountB;
+      let finalMintAmountA = params.mintAmountA;
+      let finalMintAmountB = params.mintAmountB;
 
       if (Asset.compare(asset1, asset2) === 1) {
         assetA = asset2;
         assetB = asset1;
         maxAmountA = params.amountB;
         maxAmountB = params.amountA;
+        finalMintAmountA = params.mintAmountB;
+        finalMintAmountB = params.mintAmountA;
       }
 
       const txBuilder = new TransactionBuilder(userAccount, {
@@ -68,23 +72,23 @@ export class TestnetToolsService {
       }
 
       // 2. Mint custom tokens to user
-      if (!assetA.isNative() && params.mintAmountA) {
+      if (!assetA.isNative() && finalMintAmountA) {
         txBuilder.addOperation(
           Operation.payment({
             source: issuerKeys.publicKey(),
             destination: params.userPublicKey,
             asset: assetA,
-            amount: params.mintAmountA,
+            amount: finalMintAmountA,
           })
         );
       }
-      if (!assetB.isNative() && params.mintAmountB) {
+      if (!assetB.isNative() && finalMintAmountB) {
         txBuilder.addOperation(
           Operation.payment({
             source: issuerKeys.publicKey(),
             destination: params.userPublicKey,
             asset: assetB,
-            amount: params.mintAmountB,
+            amount: finalMintAmountB,
           })
         );
       }
