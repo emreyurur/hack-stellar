@@ -13,7 +13,7 @@ export class TestnetToolsService {
   async automateTokenAndLP(params: AutomateLpDto) {
     this.logger.log('Starting automated Token Minting and LP Deposit...');
 
-    const issuerSecretStr = params.issuerSecret || process.env.TESTNET_ISSUER_SECRET;
+    const issuerSecretStr = process.env.TESTNET_ISSUER_SECRET;
     const distributorSecretStr = params.distributorSecret || process.env.TESTNET_DISTRIBUTOR_SECRET;
 
     if (!issuerSecretStr || !distributorSecretStr) {
@@ -120,7 +120,6 @@ export class TestnetToolsService {
   }
 
   async automateCustomTokenLP(params: {
-    issuerSecret?: string;
     distributorSecret?: string;
     tokenCode1: string;
     mintAmount1: string;
@@ -131,7 +130,7 @@ export class TestnetToolsService {
   }) {
     this.logger.log('Starting automated Custom Token-Token Minting and LP Deposit...');
 
-    const issuerSecretStr = params.issuerSecret || process.env.TESTNET_ISSUER_SECRET;
+    const issuerSecretStr = process.env.TESTNET_ISSUER_SECRET;
     const distributorSecretStr = params.distributorSecret || process.env.TESTNET_DISTRIBUTOR_SECRET;
 
     if (!issuerSecretStr || !distributorSecretStr) {
@@ -231,14 +230,13 @@ export class TestnetToolsService {
   }
 
   async mintTokenToWallet(params: {
-    issuerSecret?: string;
     tokenCode: string;
     amount: string;
     destination: string;
   }) {
     this.logger.log(`Minting ${params.amount} ${params.tokenCode} to ${params.destination}...`);
 
-    const issuerSecretStr = params.issuerSecret || process.env.TESTNET_ISSUER_SECRET;
+    const issuerSecretStr = process.env.TESTNET_ISSUER_SECRET;
     if (!issuerSecretStr) {
       throw new Error('Issuer secret is required (via DTO or .env)');
     }

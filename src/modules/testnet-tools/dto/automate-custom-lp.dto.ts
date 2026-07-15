@@ -2,10 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
 
 export class AutomateCustomLpDto {
-  @ApiPropertyOptional({ description: 'Issuer secret key for testnet. If not provided, process.env.TESTNET_ISSUER_SECRET is used.' })
-  @IsOptional()
-  @IsString()
-  issuerSecret?: string;
 
   @ApiPropertyOptional({ description: 'Distributor secret key for testnet. If not provided, process.env.TESTNET_DISTRIBUTOR_SECRET is used.' })
   @IsOptional()
