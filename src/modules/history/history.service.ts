@@ -82,9 +82,9 @@ export class HistoryService {
     // Fetch top 50 pools + pools that active users have interacted with
     const poolsToSyncResult = await this.dataSource.query(`
       SELECT id FROM (
-        SELECT id FROM liquidity_pool ORDER BY "tvlUsd" DESC LIMIT 50
+        SELECT id FROM liquidity_pools ORDER BY "totalTrustlines" DESC LIMIT 50
         UNION
-        SELECT "poolId" as id FROM user_position
+        SELECT "poolId" as id FROM user_positions
         UNION
         SELECT "poolId" as id FROM transaction_history WHERE "poolId" IS NOT NULL
       ) as combined
@@ -102,80 +102,94 @@ export class HistoryService {
           state = this.indexerStateRepository.create({ poolId, lastPagingToken: '0' });
         }
 
-        // Fetch operations for this pool
-        const response = await server.operations()
-          .forLiquidityPool(poolId)
-          .cursor(state.lastPagingToken)
-          .limit(200)
-          .order('asc')
-          .call();
+        let pagesFetched = 0;
+        let hasMore = true;
 
-        const records = response.records;
-        if (records.length === 0) continue;
+        while (hasMore && pagesFetched < 20) {
+          // Fetch operations for this pool
+          const response = await server.operations()
+            .forLiquidityPool(poolId)
+            .cursor(state.lastPagingToken)
+            .limit(200)
+            .order('asc')
+            .call();
 
-        let addedCount = 0;
-
-        for (const op of records) {
-          let txType: TransactionType;
-          let assetA = '';
-          let amountA = '';
-          let assetB = '';
-          let amountB = '';
-          
-          if (op.type === 'liquidity_pool_deposit') {
-            txType = TransactionType.DEPOSIT;
-            // op.reserves_max is an array of reserves used.
-            const depOp = op as any;
-            if (depOp.reserves_max && depOp.reserves_max.length === 2) {
-              assetA = depOp.reserves_max[0].asset || 'XLM';
-              amountA = depOp.reserves_max[0].amount;
-              assetB = depOp.reserves_max[1].asset || 'XLM';
-              amountB = depOp.reserves_max[1].amount;
-            }
-          } else if (op.type === 'liquidity_pool_withdraw') {
-            txType = TransactionType.WITHDRAW;
-            const witOp = op as any;
-            if (witOp.reserves_min && witOp.reserves_min.length === 2) {
-              assetA = witOp.reserves_min[0].asset || 'XLM';
-              amountA = witOp.reserves_min[0].amount;
-              assetB = witOp.reserves_min[1].asset || 'XLM';
-              amountB = witOp.reserves_min[1].amount;
-            }
-          } else if (op.type === 'path_payment_strict_send' || op.type === 'path_payment_strict_receive') {
-            txType = TransactionType.SWAP;
-            const swapOp = op as any;
-            assetA = swapOp.source_asset_type === 'native' ? 'XLM' : swapOp.source_asset_code;
-            amountA = swapOp.source_amount;
-            assetB = swapOp.asset_type === 'native' ? 'XLM' : swapOp.asset_code;
-            amountB = swapOp.amount;
-          } else {
-            // Ignore other operations on the LP for now
-            state.lastPagingToken = op.paging_token;
-            continue;
+          const records = response.records;
+          if (records.length === 0) {
+            hasMore = false;
+            break;
           }
 
-          // Parse assets strings
-          if (assetA && assetA.includes(':')) assetA = assetA.split(':')[0];
-          if (assetB && assetB.includes(':')) assetB = assetB.split(':')[0];
+          let addedCount = 0;
 
-          await this.logTransaction({
-            userPublicKey: op.source_account,
-            poolId: poolId,
-            type: txType,
-            assetA: assetA || 'Unknown',
-            amountA: amountA || '0',
-            assetB: assetB,
-            amountB: amountB,
-            tx: op.transaction_hash,
-          });
+          for (const op of records) {
+            let txType: TransactionType;
+            let assetA = '';
+            let amountA = '';
+            let assetB = '';
+            let amountB = '';
+            
+            if (op.type === 'liquidity_pool_deposit') {
+              txType = TransactionType.DEPOSIT;
+              const depOp = op as any;
+              const reserves = depOp.reserves_deposited || depOp.reserves_max;
+              if (reserves && reserves.length === 2) {
+                assetA = reserves[0].asset || 'XLM';
+                amountA = reserves[0].amount;
+                assetB = reserves[1].asset || 'XLM';
+                amountB = reserves[1].amount;
+              }
+            } else if (op.type === 'liquidity_pool_withdraw') {
+              txType = TransactionType.WITHDRAW;
+              const witOp = op as any;
+              const reserves = witOp.reserves_received || witOp.reserves_min;
+              if (reserves && reserves.length === 2) {
+                assetA = reserves[0].asset || 'XLM';
+                amountA = reserves[0].amount;
+                assetB = reserves[1].asset || 'XLM';
+                amountB = reserves[1].amount;
+              }
+            } else if (op.type === 'path_payment_strict_send' || op.type === 'path_payment_strict_receive') {
+              txType = TransactionType.SWAP;
+              const swapOp = op as any;
+              assetA = swapOp.source_asset_type === 'native' ? 'XLM' : swapOp.source_asset_code;
+              amountA = swapOp.source_amount;
+              assetB = swapOp.asset_type === 'native' ? 'XLM' : swapOp.asset_code;
+              amountB = swapOp.amount;
+            } else {
+              // Ignore other operations on the LP for now
+              state.lastPagingToken = op.paging_token;
+              continue;
+            }
 
-          addedCount++;
-          state.lastPagingToken = op.paging_token;
-        }
+            // Parse assets strings
+            if (assetA && assetA.includes(':')) assetA = assetA.split(':')[0];
+            if (assetB && assetB.includes(':')) assetB = assetB.split(':')[0];
 
-        await this.indexerStateRepository.save(state);
-        if (addedCount > 0) {
-          this.logger.debug(`Indexed ${addedCount} operations for pool ${poolId}`);
+            await this.logTransaction({
+              userPublicKey: op.source_account,
+              poolId: poolId,
+              type: txType,
+              assetA: assetA || 'Unknown',
+              amountA: amountA || '0',
+              assetB: assetB,
+              amountB: amountB,
+              tx: op.transaction_hash,
+            });
+
+            addedCount++;
+            state.lastPagingToken = op.paging_token;
+          }
+
+          await this.indexerStateRepository.save(state);
+          if (addedCount > 0) {
+            this.logger.debug(`Indexed ${addedCount} operations for pool ${poolId}`);
+          }
+          
+          if (records.length < 200) {
+            hasMore = false;
+          }
+          pagesFetched++;
         }
       } catch (err) {
         this.logger.error(`Error syncing pool ${poolId}: ${err.message}`);
