@@ -762,26 +762,26 @@ export function PoolDetailsView({
       ) : (
         <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
-            <p className="font-mono text-xl font-extrabold text-white sm:text-2xl">${suppliedUsdValue.toFixed(2)}</p>
+            <p className="font-mono text-xl font-extrabold text-white sm:text-2xl">${suppliedUsdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             <p className="mt-1 text-xs text-[#9CA3AF]">Position Value</p>
           </div>
           <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
             <p className="font-mono text-xl font-extrabold text-white sm:text-2xl">
-              {suppliedAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+              {suppliedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
               <span className="ml-1 text-xs font-normal text-[#9CA3AF]">{pool.asset}</span>
             </p>
             <p className="mt-1 text-xs text-[#9CA3AF]">Staked Shares</p>
           </div>
           <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
-            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">+${safeEarnedUsd.toFixed(4)}</p>
+            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">+${safeEarnedUsd.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</p>
             <p className="mt-1 text-xs text-[#9CA3AF]">Interest Earned</p>
           </div>
           <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
-            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">+${(suppliedUsdValue * (safeApy / 100) / 365).toFixed(4)}</p>
+            <p className="font-mono text-xl font-extrabold text-[#16A34A] sm:text-2xl">+${(suppliedUsdValue * (safeApy / 100) / 365).toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</p>
             <p className="mt-1 text-xs text-[#9CA3AF]">Daily Interest</p>
           </div>
           <div className="col-span-2 sm:col-span-1 rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
-            <p className="font-mono text-xl font-extrabold text-[#F2C12E] sm:text-2xl">{safeApy.toFixed(2)}%</p>
+            <p className="font-mono text-xl font-extrabold text-[#F2C12E] sm:text-2xl">{safeApy.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</p>
             <p className="mt-1 text-xs text-[#9CA3AF]">Current APY</p>
           </div>
         </div>

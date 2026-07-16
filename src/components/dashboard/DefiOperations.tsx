@@ -60,6 +60,16 @@ function getNowTimestamp(): number {
   return Date.now()
 }
 
+function formatUsd(val: number | string): string {
+  const num = Number(val) || 0
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatAmount(val: number | string, decimals = 2): string {
+  const num = Number(val) || 0
+  return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+}
+
 // ─── Token Avatars Helper ────────────────────────────────────────────────────────
 const TOKEN_COLORS: Record<string, string> = {
   XLM: '#3b82f6',
@@ -374,15 +384,15 @@ export function DefiOperations({
                     </div>
                     <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
                       <p className="text-xs text-[#9CA3AF]">Positions Value</p>
-                      <p className="mt-2 font-mono text-2xl font-bold text-white">${(Number(displayValUsd) || 0).toFixed(2)}</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-white">${formatUsd(displayValUsd)}</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
                       <p className="text-xs text-[#9CA3AF]">Avg APY</p>
-                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">{(Number(displayApy) || 0).toFixed(2)}%</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">{formatAmount(displayApy, 2)}%</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.08] bg-[#111119] p-5">
                       <p className="text-xs text-[#9CA3AF]">Interest Earned</p>
-                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">+${(Number(displayEarned) || 0).toFixed(4)}</p>
+                      <p className="mt-2 font-mono text-2xl font-bold text-[#16A34A]">+${formatAmount(displayEarned, 4)}</p>
                     </div>
                   </div>
                 )
@@ -438,28 +448,28 @@ export function DefiOperations({
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 whitespace-nowrap">
                               <p className="text-sm font-semibold text-white truncate">
-                                {(Number(pos.amount) || 0).toFixed(2)} {pos.asset}
+                                {formatAmount(pos.amount, 2)} {pos.asset}
                               </p>
                               <span className="shrink-0 rounded bg-white/[0.06] px-2 py-0.5 text-[11px] font-bold text-[#F2C12E] border border-white/[0.08]">
                                 {posPair}
                               </span>
                             </div>
-                            <p className="mt-0.5 text-xs text-[#9CA3AF] whitespace-nowrap">${(Number(posValUsd) || 0).toFixed(2)}</p>
+                            <p className="mt-0.5 text-xs text-[#9CA3AF] whitespace-nowrap">${formatUsd(posValUsd)}</p>
                           </div>
 
                           {/* Supply APY */}
                           <div className="min-w-0">
                             <span className="text-sm font-bold text-[#16A34A] whitespace-nowrap">
-                              {(Number(pos.apy) || 0).toFixed(2)}%
+                              {formatAmount(pos.apy, 2)}%
                             </span>
                           </div>
 
                           {/* Interest Earned */}
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-[#16A34A] whitespace-nowrap truncate">
-                              +{earned.toFixed(4)} {pos.asset}
+                              +{formatAmount(earned, 4)} {pos.asset}
                             </p>
-                            <p className="mt-0.5 text-xs text-[#9CA3AF] whitespace-nowrap">+${earnedUsd.toFixed(4)}</p>
+                            <p className="mt-0.5 text-xs text-[#9CA3AF] whitespace-nowrap">+${formatAmount(earnedUsd, 4)}</p>
                           </div>
 
                           {/* Vault Profile */}
@@ -779,14 +789,14 @@ export function PositionCard({
           <div>
             <p className="text-[10px] uppercase tracking-[0.15em] text-[#9CA3AF]">Staked</p>
             <p className="mt-1.5 text-3xl font-bold tabular-nums leading-none text-[#F0F0F0]">
-              {position.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              {formatAmount(position.amount, 2)}
               <span className="ml-1.5 text-base font-normal text-[#9CA3AF]">{position.asset}</span>
             </p>
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-[0.15em] text-[#9CA3AF]">Est. earned</p>
             <p className="mt-1.5 text-2xl font-bold tabular-nums leading-none text-[#16A34A]">
-              +{earned < 0.01 ? earned.toFixed(4) : earned.toFixed(2)}
+              +{formatAmount(earned, earned < 0.01 ? 4 : 2)}
               <span className="ml-1 text-sm font-normal text-[#16A34A]/70">{position.asset}</span>
             </p>
           </div>
