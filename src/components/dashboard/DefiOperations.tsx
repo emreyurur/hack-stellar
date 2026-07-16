@@ -197,7 +197,20 @@ export function DefiOperations({
   const displayPositions = useMemo(() => {
     if (!publicKey) return []
     const apiPosList = portfolioState.state.status === 'success' ? portfolioState.state.data.portfolio.positions : []
-    const mappedApi: LocalPosition[] = apiPosList.map((apiP, idx) => {
+    const validApiList = apiPosList.filter((apiP) => {
+      if (!apiP) return false
+      const cat = String(apiP.category || apiP.type || '').toUpperCase()
+      if (cat === 'TOKEN' || cat === 'WALLET' || cat === 'BALANCE' || apiP.isToken === true || apiP.isLp === false) {
+        return false
+      }
+      const pId = String(apiP.poolId ?? apiP.pool_id ?? apiP.contractId ?? apiP.contract_id ?? apiP.poolAddress ?? apiP.pool_address ?? '')
+      const shares = Number(apiP.shares ?? apiP.lpShares ?? apiP.lp_shares ?? 0)
+      if (!pId && shares <= 0 && cat !== 'AMM LP' && cat !== 'POOL') {
+        return false
+      }
+      return true
+    })
+    const mappedApi: LocalPosition[] = validApiList.map((apiP, idx) => {
       const pId = String(apiP.poolId ?? apiP.pool_id ?? apiP.contractId ?? apiP.contract_id ?? apiP.poolAddress ?? apiP.pool_address ?? apiP.pool ?? apiP.id ?? '')
       const assetStr = String(apiP.asset ?? apiP.tokenSymbol ?? apiP.tokenCode ?? apiP.tokens ?? apiP.assetCode ?? apiP.asset_code ?? apiP.symbol ?? apiP.pair ?? apiP.assetA ?? apiP.asset_a ?? 'XLM')
       return {
@@ -216,7 +229,7 @@ export function DefiOperations({
     })
     const combined = [...positions]
     for (const p of mappedApi) {
-      if (!combined.some((c) => (c.poolId && p.poolId && c.poolId === p.poolId) || (c.asset === p.asset && Math.abs(c.amount - p.amount) < 0.001))) {
+      if (p.poolId && !combined.some((c) => Boolean(c.poolId) && c.poolId === p.poolId)) {
         combined.push(p)
       }
     }
@@ -301,7 +314,7 @@ export function DefiOperations({
           userPositions={
             selectedPositionId
               ? displayPositions.filter((p) => p.id === selectedPositionId)
-              : displayPositions.filter((p) => p.poolId === selectedPool.id || (selectedPool.contractId && p.poolId === selectedPool.contractId) || p.asset === selectedPool.asset || p.asset === selectedPool.secondaryAsset)
+              : displayPositions.filter((p) => Boolean(p.poolId) && (p.poolId === selectedPool.id || (selectedPool.contractId && p.poolId === selectedPool.contractId)))
           }
         />
       </SafeErrorBoundary>

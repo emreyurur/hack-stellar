@@ -51,11 +51,36 @@ function savePositionsToStorage(positions: LocalPosition[], pubKey?: string | nu
   }
 }
 
+const ACTIVE_PAGE_STORAGE_KEY = 'terminal8_active_page'
+
+function getStoredActivePage(): AppPage {
+  try {
+    const saved = localStorage.getItem(ACTIVE_PAGE_STORAGE_KEY) as AppPage | null
+    if (saved && ['landing', 'home', 'studio', 'docs', 'tester'].includes(saved)) {
+      return saved
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'landing'
+}
+
 function AppInner() {
   const { networkPassphrase, networkUrl, publicKey, status } = useWallet()
   const { balances, refreshBalances } = useWalletBalances()
 
-  const [activePage, setActivePage] = useState<AppPage>('landing')
+  const [activePageRaw, setActivePageRaw] = useState<AppPage>(() => getStoredActivePage())
+
+  const setActivePage = useCallback((page: AppPage) => {
+    setActivePageRaw(page)
+    try {
+      localStorage.setItem(ACTIVE_PAGE_STORAGE_KEY, page)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const activePage = activePageRaw
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>(initialLines)

@@ -22,15 +22,53 @@ StellarWalletsKit.init({
   network: Networks.TESTNET,
 })
 
+const WALLET_SESSION_STORAGE_KEY = 'terminal8_wallet_session'
+
+interface StoredWalletSession {
+  publicKey: string
+  network: string | null
+  networkPassphrase: string | null
+  sorobanRpcUrl: string | null
+  networkUrl: string | null
+}
+
+function loadStoredWalletSession(): StoredWalletSession | null {
+  try {
+    const raw = localStorage.getItem(WALLET_SESSION_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as StoredWalletSession
+      if (parsed && typeof parsed.publicKey === 'string' && parsed.publicKey.startsWith('G') && parsed.publicKey.length === 56) {
+        return parsed
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+function saveWalletSession(session: StoredWalletSession | null) {
+  try {
+    if (!session) {
+      localStorage.removeItem(WALLET_SESSION_STORAGE_KEY)
+    } else {
+      localStorage.setItem(WALLET_SESSION_STORAGE_KEY, JSON.stringify(session))
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<WalletStatus>('DISCONNECTED')
-  const [publicKey, setPublicKey] = useState<string | null>(null)
-  const [network, setNetwork] = useState<string | null>(null)
-  const [networkPassphrase, setNetworkPassphrase] = useState<string | null>(null)
-  const [sorobanRpcUrl, setSorobanRpcUrl] = useState<string | null>(null)
-  const [networkUrl, setNetworkUrl] = useState<string | null>(null)
+  const initialSession = useMemo(() => loadStoredWalletSession(), [])
+  const [status, setStatus] = useState<WalletStatus>(() => (initialSession ? 'CONNECTED' : 'DISCONNECTED'))
+  const [publicKey, setPublicKey] = useState<string | null>(() => (initialSession ? initialSession.publicKey : null))
+  const [network, setNetwork] = useState<string | null>(() => (initialSession ? initialSession.network : null))
+  const [networkPassphrase, setNetworkPassphrase] = useState<string | null>(() => (initialSession ? initialSession.networkPassphrase : null))
+  const [sorobanRpcUrl, setSorobanRpcUrl] = useState<string | null>((() => (initialSession ? initialSession.sorobanRpcUrl : null)))
+  const [networkUrl, setNetworkUrl] = useState<string | null>(() => (initialSession ? initialSession.networkUrl : null))
   const [error, setError] = useState<string | null>(null)
   const [errorType, setErrorType] = useState<ReturnType<typeof classifyWalletError>['type'] | null>(null)
 
@@ -62,6 +100,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setSorobanRpcUrl(resolvedSorobanUrl)
       setNetworkUrl(resolvedNetworkUrl)
       setStatus('CONNECTED')
+
+      saveWalletSession({
+        publicKey: address,
+        network: resolvedNetwork,
+        networkPassphrase: passphrase,
+        sorobanRpcUrl: resolvedSorobanUrl,
+        networkUrl: resolvedNetworkUrl,
+      })
     } catch (reason) {
       const { type, message } = classifyWalletError(reason)
       setPublicKey(null)
@@ -89,6 +135,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setNetworkUrl(null)
     setError(null)
     setErrorType(null)
+    saveWalletSession(null)
   }, [])
 
   // Listen for kit-level disconnect events
@@ -102,6 +149,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setNetworkUrl(null)
       setError(null)
       setErrorType(null)
+      saveWalletSession(null)
     })
     return unsub
   }, [])
