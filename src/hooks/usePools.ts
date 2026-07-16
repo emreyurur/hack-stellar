@@ -103,7 +103,12 @@ function mapApiPoolToDeFiPool(pool: ApiPool): DeFiPool {
   let assetB = pool.assetBCode || 'USDC'
   let resA = Number(pool.reserveA) || 0
   let resB = Number(pool.reserveB) || 0
-  if (pool.assetBCode === 'XLM') {
+  if (assetA === 'XLM' && assetB !== 'USDC' && assetB !== 'EURC' && assetB !== 'XLM') {
+    assetA = pool.assetBCode || 'USDC'
+    assetB = pool.assetACode || 'XLM'
+    resA = Number(pool.reserveB) || 0
+    resB = Number(pool.reserveA) || 0
+  } else if (assetB === 'XLM' && (assetA === 'USDC' || assetA === 'EURC')) {
     assetA = pool.assetBCode
     assetB = pool.assetACode || 'USDC'
     resA = Number(pool.reserveB) || 0

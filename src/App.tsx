@@ -144,9 +144,6 @@ function AppInner() {
   )
 
   const handleLaunchApp = () => {
-    window.alert(
-      "Notice: We are currently in the Stellar Testnet phase.\n\nIf you don't have enough test tokens right now, you can easily mint tokens directly from our 'Token Studio' to test LPs!"
-    )
     setActivePage('home')
   }
 

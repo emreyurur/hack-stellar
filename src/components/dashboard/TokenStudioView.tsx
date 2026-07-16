@@ -100,11 +100,37 @@ function formatFriendlyError(err: unknown, status?: number, data?: unknown): Fri
     }
   }
 
-  if (lower.includes('network') || lower.includes('failed to fetch') || status === 500) {
+  if (lower.includes('op_malformed')) {
     return {
-      title: 'Network / Server Connection Error',
-      message: 'Could not connect to the Stellar network or the transaction server.',
-      tip: 'Solution: Check your internet connection and try again in a few seconds.',
+      title: 'Malformed Operation Parameters (op_malformed)',
+      message: `Horizon rejected the transaction because an operation parameter is invalid (${rawStr}).`,
+      tip: 'Solution: (1) Ensure User Public Key is NOT the token issuer address (GA3RQ...DROP), as an issuer cannot open a trustline to itself. (2) Check that amounts have at most 7 decimals. (3) Ensure token codes and destination address are valid.',
+    }
+  }
+
+  if (lower.includes('op_underfunded') || lower.includes('op_no_trust') || lower.includes('op_line_full') || lower.includes('op_not_authorized')) {
+    return {
+      title: 'Stellar Operation Failed',
+      message: `The on-chain operation failed when executing: ${rawStr}`,
+      tip: 'Solution: Verify that your account has enough balance, valid trustlines established, and no limit restrictions.',
+    }
+  }
+
+  if (lower.includes('tx_failed') || lower.includes('transaction failed when submitted to the stellar network')) {
+    return {
+      title: 'Stellar Transaction Rejected',
+      message: `The transaction was rejected by Horizon: ${rawStr}`,
+      tip: 'Solution: Check the specific operation error codes in the details above and correct your parameters.',
+    }
+  }
+
+  if ((lower.includes('network') && !lower.includes('submitted to the stellar network')) || lower.includes('failed to fetch') || status === 500) {
+    return {
+      title: status === 500 ? 'Server Error (HTTP 500)' : 'Network / Server Connection Error',
+      message: rawStr && rawStr.trim() !== '' && !rawStr.toLowerCase().includes('failed to fetch')
+        ? `Could not connect to the Stellar network or server. Details: ${rawStr}`
+        : 'Could not connect to the Stellar network or the transaction server.',
+      tip: 'Solution: Check your internet connection, ensure adblockers/VPN are not blocking batuhantekin.icu or Horizon, and verify your inputs.',
     }
   }
 
@@ -136,14 +162,14 @@ export function TokenStudioView() {
   const [autoSign, setAutoSign] = useState(true)
 
   // ── 1. Pool Creation States (/build-lp-tx) ──
-  const [poolTokenB, setPoolTokenB] = useState('YRK')
+  const [poolTokenB, setPoolTokenB] = useState('terminal')
   const [poolAmountA, setPoolAmountA] = useState('1000')
   const [poolAmountB, setPoolAmountB] = useState('1000')
   const [poolMintAmountB, setPoolMintAmountB] = useState('5000')
   const [poolUserPublicKey, setPoolUserPublicKey] = useState(publicKey || '')
 
   // ── 2. Trust & Mint Token States (/build-trust-mint-tx) ──
-  const [mintTokenCode, setMintTokenCode] = useState('YRK')
+  const [mintTokenCode, setMintTokenCode] = useState('terminal')
   const [mintAmount, setMintAmount] = useState('50000')
   const [mintDestination, setMintDestination] = useState(publicKey || '')
 
@@ -230,6 +256,18 @@ export function TokenStudioView() {
     setOnChainTxHash(null)
     setStepMessage('Sending transaction request to secure server...')
 
+    const targetKey = activeTab === 'pool' ? poolUserPublicKey.trim() : mintDestination.trim()
+    if (targetKey === 'GA3RQBG5BBRZKK3J6FW5KEYKWIH5YPFGRMDNOYTBQCVZJUJ4F234DROP') {
+      setUserError({
+        title: 'Invalid User Public Key (Issuer Address Used)',
+        message: 'You entered the Token Issuer address (GA3RQ...DROP) as your User Public Key. In the Stellar protocol, an issuer account cannot open a trustline to itself or deposit into a liquidity pool against its own token (`op_malformed`).',
+        tip: 'Solution: Click "Use My Wallet" above to auto-fill your connected Freighter wallet address, or paste your own personal Stellar Testnet public key.',
+      })
+      setSigningState('error')
+      setLoading(false)
+      return
+    }
+
     let url = ''
     let payload: Record<string, unknown> = {}
 
@@ -293,7 +331,16 @@ export function TokenStudioView() {
       }
     } catch (err: unknown) {
       setSigningState('error')
-      setUserError(formatFriendlyError(err))
+      let respData: unknown = null
+      let respStatus: number | undefined = undefined
+      if (err && typeof err === 'object' && 'response' in err) {
+        const r = (err as Record<string, { data?: unknown; status?: number }>).response
+        if (r) {
+          respData = r.data
+          respStatus = r.status
+        }
+      }
+      setUserError(formatFriendlyError(err, respStatus, respData))
       setStepMessage(null)
     } finally {
       setLoading(false)
@@ -466,11 +513,11 @@ export function TokenStudioView() {
                       type="text"
                       value={poolTokenB}
                       onChange={(e) => setPoolTokenB(e.target.value)}
-                      placeholder="Enter desired Token B name (e.g. YRK, VIBE)"
+                      placeholder="Enter desired Token B name (e.g. terminal, VIBE)"
                       className="mt-2 w-full rounded-xl border border-white/[0.12] bg-[#181824] px-4 py-3 font-mono text-sm font-bold text-white focus:border-[#3B82F6] focus:outline-none"
                     />
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {['YRK', 'terminal', 'USDC', 'VIBE'].map((code) => (
+                      {['terminal', 'USDC', 'VIBE'].map((code) => (
                         <button
                           key={code}
                           type="button"
@@ -569,11 +616,11 @@ export function TokenStudioView() {
                     type="text"
                     value={mintTokenCode}
                     onChange={(e) => setMintTokenCode(e.target.value)}
-                    placeholder="e.g. terminal, YRK, USDC"
+                    placeholder="e.g. terminal, USDC, VIBE"
                     className="mt-2 w-full rounded-xl border border-white/[0.12] bg-[#181824] px-4 py-3.5 font-mono text-sm font-bold text-white focus:border-[#F2C12E] focus:outline-none"
                   />
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {['YRK', 'terminal', 'USDC', 'VIBE'].map((code) => (
+                    {['terminal', 'USDC', 'VIBE'].map((code) => (
                       <button
                         key={code}
                         type="button"

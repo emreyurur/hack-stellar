@@ -434,7 +434,7 @@ export function PoolDetailsView({
 
   const safeApy = Number.isFinite(Number(pool.apy)) ? Number(pool.apy) : 5.0
 
-  const myPosition = userPositions[0] || userPositions.find((p) => p.poolId === pool.id)
+  const myPosition = userPositions[0] || userPositions.find((p) => p.poolId === pool.id || (pool.contractId && p.poolId === pool.contractId) || p.asset === pool.asset || (pool.secondaryAsset && p.asset === pool.secondaryAsset))
   const rawAmount = Number(myPosition?.amount)
   const suppliedAmount = Number.isFinite(rawAmount) ? rawAmount : 0
   const suppliedUsdValue = Number.isFinite(suppliedAmount * tokenUsdPrice) ? suppliedAmount * tokenUsdPrice : 0

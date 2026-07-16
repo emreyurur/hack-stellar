@@ -123,6 +123,47 @@ function TokenAvatar({ code = 'XLM' }: { code?: string; size?: string }) {
   )
 }
 
+function findMatchingPool(pos: LocalPosition, allKnownPools: DeFiPool[], fallbackPool: DeFiPool): DeFiPool {
+  if (!pos) return fallbackPool
+
+  // 1. Exact ID or Contract ID match
+  if (pos.poolId && pos.poolId.trim() !== '') {
+    const cleanId = pos.poolId.trim().toLowerCase()
+    const exactMatch = allKnownPools.find((p) => {
+      const pId = (p.id || '').toLowerCase()
+      const pContract = (p.contractId || '').toLowerCase()
+      return pId === cleanId || pContract === cleanId || (cleanId.length > 8 && (pId.includes(cleanId) || cleanId.includes(pId) || pContract.includes(cleanId) || cleanId.includes(pContract)))
+    })
+    if (exactMatch) return exactMatch
+  }
+
+  // 2. Pair / Asset symbol exact check
+  const posAssetClean = (pos.asset || '').trim().toUpperCase()
+  if (posAssetClean && posAssetClean !== 'XLM' && posAssetClean !== 'USDC') {
+    const tokenParts = posAssetClean.split('/').map((t) => t.trim())
+    const targetToken = tokenParts.find((t) => t !== 'XLM' && t !== 'USDC') || posAssetClean
+
+    const symbolMatch = allKnownPools.find((p) => {
+      const pAsset = (p.asset || '').toUpperCase()
+      const pSec = (p.secondaryAsset || '').toUpperCase()
+      return pAsset === targetToken || pSec === targetToken || `${pAsset}/${pSec}` === posAssetClean || `${pSec}/${pAsset}` === posAssetClean
+    })
+    if (symbolMatch) return symbolMatch
+  }
+
+  // 3. If pos is YRK or terminal specifically or XLM/YRK
+  if (posAssetClean.includes('YRK') || (pos.poolId && pos.poolId.toLowerCase().includes('yrk'))) {
+    const yrkPool = allKnownPools.find((p) => (p.asset || '').toUpperCase() === 'YRK' || (p.secondaryAsset || '').toUpperCase() === 'YRK')
+    if (yrkPool) return yrkPool
+  }
+
+  // 4. Fallback exact asset match where secondaryAsset matches or is undefined
+  const basicMatch = allKnownPools.find((p) => (p.asset || '').toUpperCase() === posAssetClean && !p.secondaryAsset)
+  if (basicMatch) return basicMatch
+
+  return fallbackPool
+}
+
 export function DefiOperations({
   balances,
   onPositionAdded,
@@ -156,22 +197,26 @@ export function DefiOperations({
   const displayPositions = useMemo(() => {
     if (!publicKey) return []
     const apiPosList = portfolioState.state.status === 'success' ? portfolioState.state.data.portfolio.positions : []
-    const mappedApi: LocalPosition[] = apiPosList.map((apiP, idx) => ({
-      id: `api_pos_${idx}_${apiP.poolId || apiP.asset}`,
-      poolId: apiP.poolId || '',
-      asset: apiP.asset || 'XLM',
-      amount: Number(apiP.amount ?? apiP.shares ?? 0),
-      apy: Number(apiP.apy ?? 5.5),
-      openedAt: 1720000000000,
-      hash: `api_hash_${idx}`,
-      protocol: 'Soroswap',
-      status: 'success',
-      timestamp: '12:00:00 AM',
-      category: 'AMM LP',
-    }))
+    const mappedApi: LocalPosition[] = apiPosList.map((apiP, idx) => {
+      const pId = String(apiP.poolId ?? apiP.pool_id ?? apiP.contractId ?? apiP.contract_id ?? apiP.poolAddress ?? apiP.pool_address ?? apiP.pool ?? apiP.id ?? '')
+      const assetStr = String(apiP.asset ?? apiP.tokenSymbol ?? apiP.tokenCode ?? apiP.tokens ?? apiP.assetCode ?? apiP.asset_code ?? apiP.symbol ?? apiP.pair ?? apiP.assetA ?? apiP.asset_a ?? 'XLM')
+      return {
+        id: `api_pos_${idx}_${pId || assetStr}`,
+        poolId: pId,
+        asset: assetStr,
+        amount: Number(apiP.amount ?? apiP.shares ?? apiP.balance ?? 0),
+        apy: Number(apiP.apy ?? apiP.estimatedApy ?? 12.5),
+        openedAt: Number(apiP.timestamp ?? apiP.openedAt ?? 1720000000000),
+        hash: String(apiP.hash ?? apiP.txHash ?? `api_hash_${idx}`),
+        protocol: String(apiP.protocol ?? 'Soroswap AMM'),
+        status: String(apiP.status ?? 'SUCCESS'),
+        timestamp: String(apiP.date ?? '12:00:00 AM'),
+        category: (apiP.category as LocalPosition['category']) || 'AMM LP',
+      }
+    })
     const combined = [...positions]
     for (const p of mappedApi) {
-      if (!combined.some((c) => (c.poolId === p.poolId || c.asset === p.asset) && Math.abs(c.amount - p.amount) < 0.001)) {
+      if (!combined.some((c) => (c.poolId && p.poolId && c.poolId === p.poolId) || (c.asset === p.asset && Math.abs(c.amount - p.amount) < 0.001))) {
         combined.push(p)
       }
     }
@@ -256,7 +301,7 @@ export function DefiOperations({
           userPositions={
             selectedPositionId
               ? displayPositions.filter((p) => p.id === selectedPositionId)
-              : displayPositions.filter((p) => p.poolId === selectedPool.id)
+              : displayPositions.filter((p) => p.poolId === selectedPool.id || (selectedPool.contractId && p.poolId === selectedPool.contractId) || p.asset === selectedPool.asset || p.asset === selectedPool.secondaryAsset)
           }
         />
       </SafeErrorBoundary>
@@ -346,7 +391,7 @@ export function DefiOperations({
                   {/* Table Rows */}
                   <div className="divide-y divide-white/[0.06]">
                     {displayPositions.map((pos) => {
-                        const matchingPool = allKnownPools.find((p) => p.id === pos.poolId || p.asset === pos.asset) ?? activePools[0]
+                        const matchingPool = findMatchingPool(pos, allKnownPools, activePools[0] || stellarPools[0])
                         const price = pos.asset === 'XLM' ? 0.12 : 1
                         const posValUsd = pos.amount * price
                         const elapsed = getNowTimestamp() - pos.openedAt
